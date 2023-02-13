@@ -16,5 +16,5 @@ set (ENGINE_SRCS
 )
 
 add_library (Engine ${ENGINE_SRCS})
-target_link_libraries (Engine ctti cereal fmt stb glm PortAudio glad glfw imgui assimp box2d bullet3)
+target_link_libraries (Engine cereal fmt stb glm PortAudio glad glfw imgui assimp box2d bullet3)
 target_include_directories (Engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

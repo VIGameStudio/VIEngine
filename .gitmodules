@@ -1,0 +1,36 @@
+[submodule "Engine/extern/glm"]
+	path = Engine/extern/glm
+	url = https://github.com/g-truc/glm.git
+[submodule "Engine/extern/stb"]
+	path = Engine/extern/stb
+	url = https://github.com/nothings/stb.git
+[submodule "Engine/extern/portaudio"]
+	path = Engine/extern/portaudio
+	url = https://github.com/PortAudio/portaudio.git
+[submodule "Engine/extern/cereal"]
+	path = Engine/extern/cereal
+	url = https://github.com/USCiLab/cereal.git
+[submodule "Engine/extern/glfw"]
+	path = Engine/extern/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "Engine/extern/fmt"]
+	path = Engine/extern/fmt
+	url = https://github.com/fmtlib/fmt.git
+[submodule "Engine/extern/box2d"]
+	path = Engine/extern/box2d
+	url = https://github.com/erincatto/box2d.git
+[submodule "Engine/extern/bullet3"]
+	path = Engine/extern/bullet3
+	url = https://github.com/bulletphysics/bullet3.git
+[submodule "Engine/extern/assimp"]
+	path = Engine/extern/assimp
+	url = https://github.com/assimp/assimp.git
+[submodule "Editor/extern/imgui"]
+	path = Editor/extern/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "Editor/extern/ImGuizmo"]
+	path = Editor/extern/ImGuizmo
+	url = https://github.com/CedricGuillemet/ImGuizmo.git
+[submodule "Editor/extern/implot"]
+	path = Editor/extern/implot
+	url = https://github.com/epezent/implot.git

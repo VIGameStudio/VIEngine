@@ -34,3 +34,6 @@
 [submodule "Editor/extern/implot"]
 	path = Editor/extern/implot
 	url = https://github.com/epezent/implot.git
+[submodule "Engine/extern/wren"]
+	path = Engine/extern/wren
+	url = https://github.com/wren-lang/wren.git

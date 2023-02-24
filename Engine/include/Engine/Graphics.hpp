@@ -2,9 +2,9 @@
 
 #include "Engine/Math.hpp"
 #include "Engine/Resource.hpp"
-#include "Engine/Data/Shader.hpp"
-#include "Engine/Data/Texture.hpp"
-#include "Engine/Data/Model.hpp"
+#include "Engine/Resources/Shader.hpp"
+#include "Engine/Resources/Texture.hpp"
+#include "Engine/Resources/Model.hpp"
 
 #include <string>
 #include <vector>
@@ -23,25 +23,25 @@ namespace vi
 
 	struct Camera
 	{
-		glm::vec3 position = glm::vec3(0.0f);
-		glm::vec3 rotation = glm::vec3(0.0f);
-		glm::mat4 view = glm::mat4(1.0f);
-		glm::mat4 projection = glm::mat4(1.0f);
+		vec3 position = vec3(0.0f);
+		vec3 rotation = vec3(0.0f);
+		mat4 view = mat4(1.0f);
+		mat4 projection = mat4(1.0f);
 
-		glm::vec4 clearColor = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
+		vec4 clearColor = vec4(0.1f, 0.1f, 0.1f, 1.0f);
 	};
 
 	struct DirLight
 	{
-		glm::vec3 direction = glm::vec3(0.0f);;
-		glm::vec3 color = glm::vec3(1.0f);
+		vec3 direction = vec3(0.0f);;
+		vec3 color = vec3(1.0f);
 		f32 intensity = 1.0f;
 	};
 
 	struct PointLight
 	{
-		glm::vec3 position = glm::vec3(0.0f);;
-		glm::vec3 color = glm::vec3(1.0f);
+		vec3 position = vec3(0.0f);;
+		vec3 color = vec3(1.0f);
 		f32 intensity = 1.0f;
 	};
 
@@ -101,9 +101,9 @@ namespace vi
 
 		struct DrawData
 		{
-			glm::mat4 matrix = glm::mat4(1.0f);
+			mat4 matrix = mat4(1.0f);
 
-			glm::vec4 diffuse = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+			vec4 diffuse = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 			f32 diffuseMap = -1;
 			f32 normalMap = -1;
@@ -136,7 +136,7 @@ namespace vi
 
 		struct InstanceData
 		{
-			glm::mat4 matrix = glm::mat4(1);
+			mat4 matrix = mat4(1);
 			std::string animClip;
 			f32 time = 0.f;
 		};
@@ -156,16 +156,16 @@ namespace vi
 		static void LoadPipeline(Pipeline& pipeline, const Pipeline::Settings& settings);
 		static void UnloadPipeline(Pipeline& pipeline);
 
-		static void DrawStatic(Pipeline& pipeline, const Resource<Model>& model, const glm::mat4& matrix);
-		static void DrawSkinned(Pipeline& pipeline, const Resource<Model>& model, const glm::mat4& matrix, const std::string& animClip, f32 time);
+		static void DrawStatic(Pipeline& pipeline, const Resource<Model>& model, const mat4& matrix);
+		static void DrawSkinned(Pipeline& pipeline, const Resource<Model>& model, const mat4& matrix, const std::string& animClip, f32 time);
 
 		static void GenerateDrawCommands(Pipeline& pipeline);
 		static void ClearFrame(const Scene& scene);
 		static void DrawCommands(const Scene& scene, const Pipeline& pipeline);
 		static void ClearDrawCommands(Pipeline& pipeline);
 
-		static void DrawDebugLine(const glm::vec3& p1, const glm::vec3& p2, const glm::vec4& color);
-		static void DrawDebugShape(const std::vector<glm::mat4>& lines);
+		static void DrawDebugLine(const vec3& p1, const vec3& p2, const vec4& color);
+		static void DrawDebugShape(const std::vector<mat4>& lines);
 		static void DrawDebugCommands(const Scene& scene);
 		static void ClearDebugCommands();
 
@@ -177,10 +177,9 @@ namespace vi
 	private:
 		friend class Application;
 
-		static bool Initialize();
+		static bool Initialize(const void* pLoadProc);
 		static void Shutdown();
 
-		static void NewFrame();
 		static void Render();
 	};
 }

@@ -3,10 +3,15 @@ cmake_minimum_required (VERSION 3.1)
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
+project (Editor)
+
+add_compile_definitions (EDITOR_ASSETS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/Assets")
+include_directories (${EDITOR_ASSETS_PATH})
+
 add_subdirectory (extern)
 
 set (EDITOR_SRCS
-	"src/Editor/EditorWindow.cpp"
+	"src/Editor/ImGuiImpl.cpp"
 )
 
 add_executable (Editor "src/main.cpp" ${EDITOR_SRCS})

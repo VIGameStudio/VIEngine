@@ -2,7 +2,7 @@
 
 #include "Engine/Math.hpp"
 #include "Engine/Resource.hpp"
-#include "Engine/Data/Texture.hpp"
+#include "Engine/Resources/Texture.hpp"
 
 #include <unordered_set>
 #include <unordered_map>
@@ -13,23 +13,23 @@ namespace vi
 	{
 		struct Vertex
 		{
-			glm::vec4 position = glm::vec4(0, 0, 0, 1);
-			glm::vec4 normal = glm::vec4(0, 0, 0, 1);
-			glm::vec4 tangent = glm::vec4(0, 0, 0, 1);
-			glm::vec4 bitangent = glm::vec4(0, 0, 0, 1);
+			vec4 position = vec4(0, 0, 0, 1);
+			vec4 normal = vec4(0, 0, 0, 1);
+			vec4 tangent = vec4(0, 0, 0, 1);
+			vec4 bitangent = vec4(0, 0, 0, 1);
 
-			glm::vec2 texcoord0 = glm::vec2(0);
-			glm::vec2 texcoord1 = glm::vec2(0);
-			glm::vec2 texcoord2 = glm::vec2(0);
-			glm::vec2 texcoord3 = glm::vec2(0);
+			vec2 texcoord0 = vec2(0);
+			vec2 texcoord1 = vec2(0);
+			vec2 texcoord2 = vec2(0);
+			vec2 texcoord3 = vec2(0);
 
-			glm::vec4 bones = glm::vec4(-1);
-			glm::vec4 weights = glm::vec4(0);
+			vec4 bones = vec4(-1);
+			vec4 weights = vec4(0);
 		};
 
 		struct Material
 		{
-			glm::vec4 diffuse = glm::vec4(1.0f);
+			vec4 diffuse = vec4(1.0f);
 
 			Resource<Texture> diffuseMap;
 			Resource<Texture> normalMap;
@@ -47,7 +47,7 @@ namespace vi
 		struct Bone
 		{
 			std::size_t idx = 0;
-			glm::mat4 offset = glm::mat4(1);
+			mat4 offset = mat4(1);
 		};
 
 		struct Armature
@@ -59,7 +59,7 @@ namespace vi
 		{
 			f32 duration = 0.f;
 			f32 speed = 0.f;
-			std::unordered_map<std::string, std::vector<glm::mat4>> keyframes;
+			std::unordered_map<std::string, std::vector<mat4>> keyframes;
 		};
 
 		struct Mesh

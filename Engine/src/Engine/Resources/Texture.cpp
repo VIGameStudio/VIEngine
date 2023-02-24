@@ -1,4 +1,5 @@
-#include "Engine/Data/Texture.hpp"
+#include "Engine/Resources/Texture.hpp"
+
 #include "Engine/Resource.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION

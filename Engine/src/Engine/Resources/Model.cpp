@@ -1,4 +1,5 @@
-#include "Engine/Data/Model.hpp"
+#include "Engine/Resources/Model.hpp"
+
 #include "Engine/Resource.hpp"
 
 #include <assimp/Importer.hpp>

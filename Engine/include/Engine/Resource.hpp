@@ -15,6 +15,7 @@ namespace vi
 	class ResourceManager
 	{
 	public:
+		static void RegisterPath(const std::string& path);
 		static std::string GetFilePath(const std::string& filename);
 	};
 

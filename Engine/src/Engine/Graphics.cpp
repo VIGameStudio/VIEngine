@@ -6,8 +6,6 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-//#include <backends/imgui_impl_glfw.h>
-//#include <backends/imgui_impl_opengl3.h>
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include <stb_image_resize.h>
@@ -150,7 +148,7 @@ namespace vi
         for (i32 i = 0; i < 8; i++)
         {
             glEnableVertexAttribArray(i);
-            glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, sizeof(Model::Vertex), (GLvoid*)(i * sizeof(glm::vec4)));
+            glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, sizeof(Model::Vertex), (GLvoid*)(i * sizeof(vec4)));
         }
 
         // Create an element buffer and populate it
@@ -166,7 +164,7 @@ namespace vi
         for (u32 i = 0; i < 8; i++)
         {
             glEnableVertexAttribArray(8 + i);
-            glVertexAttribPointer(8 + i, 4, GL_FLOAT, GL_FALSE, sizeof(Pipeline::DrawData), (GLvoid*)(i * sizeof(glm::vec4)));
+            glVertexAttribPointer(8 + i, 4, GL_FLOAT, GL_FALSE, sizeof(Pipeline::DrawData), (GLvoid*)(i * sizeof(vec4)));
             glVertexAttribDivisor(8 + i, 1);
         }
 
@@ -198,7 +196,7 @@ namespace vi
 //#define DEBUG_GRID_TEXTURE
 #ifdef DEBUG_GRID_TEXTURE
             // Texture grid for debugging
-            glm::uvec3 color = glm::linearRand(glm::uvec3(0), glm::uvec3(255));
+            uvec3 color = linearRand(uvec3(0), uvec3(255));
             for (GLsizei y = 0; y < pipeline.settings.textureSize; ++y)
                 for (GLsizei x = 0; x < pipeline.settings.textureSize; ++x)
                     for (GLsizei k = 0; k < 4; ++k)
@@ -340,7 +338,7 @@ namespace vi
         pipeline.drawBatchMap.clear();
     }
 
-    void Graphics::DrawStatic(Pipeline& pipeline, const Resource<Model>& model, const glm::mat4& matrix)
+    void Graphics::DrawStatic(Pipeline& pipeline, const Resource<Model>& model, const mat4& matrix)
     {
         auto it = pipeline.drawBatchMap.find(model.GetHash());
         ASSERT(it != pipeline.drawBatchMap.end() && "There are no caches for model!");
@@ -351,7 +349,7 @@ namespace vi
         drawBatch.instances.emplace_back(instance);
     }
 
-    void Graphics::DrawSkinned(Pipeline& pipeline, const Resource<Model>& model, const glm::mat4& matrix, const std::string& animClip, f32 time)
+    void Graphics::DrawSkinned(Pipeline& pipeline, const Resource<Model>& model, const mat4& matrix, const std::string& animClip, f32 time)
     {
         auto it = pipeline.drawBatchMap.find(model.GetHash());
         ASSERT(it != pipeline.drawBatchMap.end() && "There are no caches for model!");
@@ -410,7 +408,7 @@ namespace vi
         /*for (u32 i = 0; i < 8; i++)
         {
             glEnableVertexAttribArray(8 + i);
-            glVertexAttribPointer(8 + i, 4, GL_FLOAT, GL_FALSE, sizeof(Pipeline::DrawData), (GLvoid*)(i * sizeof(glm::vec4)));
+            glVertexAttribPointer(8 + i, 4, GL_FLOAT, GL_FALSE, sizeof(Pipeline::DrawData), (GLvoid*)(i * sizeof(vec4)));
             glVertexAttribDivisor(8 + i, 1);
         }*/
 
@@ -435,7 +433,7 @@ namespace vi
         Window::GetSize(&width, &height);
 
         glViewport(0, 0, width, height);
-        const glm::vec4& c = scene.camera.clearColor;
+        const vec4& c = scene.camera.clearColor;
         glClearColor(c.r, c.g, c.b, c.a);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     }
@@ -450,12 +448,12 @@ namespace vi
         glBindVertexArray(pipeline.buffer);
         glUseProgram(pipeline.shader);
 
-        glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(scene.camera.view));
-        glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(scene.camera.projection));
+        glUniformMatrix4fv(0, 1, GL_FALSE, value_ptr(scene.camera.view));
+        glUniformMatrix4fv(1, 1, GL_FALSE, value_ptr(scene.camera.projection));
 
-        glUniform3fv(2, 1, glm::value_ptr(scene.camera.position));
-        glUniform3fv(3, 1, glm::value_ptr(scene.dirLight.direction));
-        glUniform3fv(4, 1, glm::value_ptr(scene.dirLight.color));
+        glUniform3fv(2, 1, value_ptr(scene.camera.position));
+        glUniform3fv(3, 1, value_ptr(scene.dirLight.direction));
+        glUniform3fv(4, 1, value_ptr(scene.dirLight.color));
         glUniform1f(5, scene.dirLight.intensity);
 
         //glActiveTexture(GL_TEXTURE0);
@@ -490,7 +488,7 @@ namespace vi
     static ShaderHandle s_debugShader = INVALID_SHADER;
     static BufferHandle s_debugBuffer = INVALID_BUFFER;
     static BufferHandle s_debugBufferObj = INVALID_BUFFER;
-    static std::vector<glm::mat4> s_debugLines;
+    static std::vector<mat4> s_debugLines;
 
     static void Init_DebugDraw()
     {
@@ -523,7 +521,7 @@ namespace vi
         for (i32 i = 0; i < 2; i++)
         {
             glEnableVertexAttribArray(i);
-            glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, 2 * sizeof(glm::vec4), (GLvoid*)(i * sizeof(glm::vec4)));
+            glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, 2 * sizeof(vec4), (GLvoid*)(i * sizeof(vec4)));
         }
 
         glBindVertexArray(0);
@@ -537,15 +535,15 @@ namespace vi
         glDeleteBuffers(1, &s_debugBuffer);
     }
 
-    void Graphics::DrawDebugLine(const glm::vec3& p1, const glm::vec3& p2, const glm::vec4& color)
+    void Graphics::DrawDebugLine(const vec3& p1, const vec3& p2, const vec4& color)
     {
-        glm::mat4 m;
-        m[0] = glm::vec4(p1, 0.0f); m[1] = color;
-        m[2] = glm::vec4(p2, 0.0f); m[3] = color;
+        mat4 m;
+        m[0] = vec4(p1, 0.0f); m[1] = color;
+        m[2] = vec4(p2, 0.0f); m[3] = color;
         s_debugLines.emplace_back(m);
     }
 
-    void Graphics::DrawDebugShape(const std::vector<glm::mat4>& lines)
+    void Graphics::DrawDebugShape(const std::vector<mat4>& lines)
     {
         s_debugLines.reserve(std::max(s_debugLines.capacity(), s_debugLines.size() + lines.size()));
         s_debugLines.insert(s_debugLines.end(), lines.begin(), lines.end());
@@ -554,14 +552,14 @@ namespace vi
     void Graphics::DrawDebugCommands(const Scene& scene)
     {
         glBindBuffer(GL_ARRAY_BUFFER, s_debugBufferObj);
-        glBufferData(GL_ARRAY_BUFFER, s_debugLines.size() * sizeof(glm::mat4), s_debugLines.data(), GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, s_debugLines.size() * sizeof(mat4), s_debugLines.data(), GL_DYNAMIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         glBindVertexArray(s_debugBuffer);
         
         glUseProgram(s_debugShader);
-        glm::mat4 vp = scene.camera.projection * scene.camera.view;
-        glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(vp));
+        mat4 vp = scene.camera.projection * scene.camera.view;
+        glUniformMatrix4fv(0, 1, GL_FALSE, value_ptr(vp));
         glDrawArrays(GL_LINES, 0, 2 * (GLsizei)s_debugLines.size());
 
         glUseProgram(0);
@@ -629,50 +627,6 @@ namespace vi
         Log::Debug(message);
     }
 
-    /*static bool Init_ImGui(void* pWindow)
-    {
-        // Setup Dear ImGui context
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO(); (void)io;
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;        // Enable Gamepad Controls
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-        //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
-        //io.ConfigViewportsNoAutoMerge = true;
-        //io.ConfigViewportsNoTaskBarIcon = true;
-
-        // Setup Dear ImGui style
-        ImGui::StyleColorsDark();
-        //ImGui::StyleColorsLight();
-
-        // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-        ImGuiStyle& style = ImGui::GetStyle();
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        {
-            style.WindowRounding = 0.0f;
-            style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-        }
-
-        if (!ImGui_ImplGlfw_InitForOpenGL((GLFWwindow*)pWindow, true))
-        {
-            Log::Error("Failed to initialize ImGui GLFW backend!");
-            return false;
-        }
-
-#if defined WIN32
-        if (!ImGui_ImplOpenGL3_Init("#version 330 core\n"))
-#elif defined __arm__
-        if (!ImGui_ImplOpenGL3_Init("#version 300 es\n"))
-#endif
-        {
-            Log::Error("Failed to initialize ImGui OpenGL backend!");
-            return false;
-        }
-
-        return true;
-    }*/
-
     static bool Init_GlDebugLog()
     {
         i32 flags;
@@ -702,13 +656,13 @@ namespace vi
         }
     }
 
-    bool Graphics::Initialize()
+    bool Graphics::Initialize(const void* pLoadProc)
     {
         // Setup GL load proc
 #if defined GL_BACKEND
-        if (!gladLoadGLLoader((GLADloadproc)Window::GetLoadProc()))
+        if (!gladLoadGLLoader((GLADloadproc)pLoadProc))
 #elif defined GLES_BACKEND
-        if (!gladLoadGLES2Loader((GLADloadproc)Window::GetLoadProc()))
+        if (!gladLoadGLES2Loader((GLADloadproc)pLoadProc))
 #endif
         {
             Log::Error("Failed to initialize GLAD!");
@@ -718,13 +672,6 @@ namespace vi
         if (!Init_GlDebugLog())
             Log::Warning("GL debug output not supported.");
         
-        // Initialize ImGui
-        //if (!Init_ImGui(Window::GetWindowPtr()))
-        //{
-        //    Log::Error("Failed to initialize ImGui!");
-        //    return false;
-        //}
-
         Print_GlInfo();
 
         Init_DebugDraw();
@@ -734,25 +681,11 @@ namespace vi
 
     void Graphics::Shutdown()
     {
-        //ImGui_ImplOpenGL3_Shutdown();
-        //ImGui_ImplGlfw_Shutdown();
-        //ImGui::DestroyContext();
-
         Dispose_DebugDraw();
-    }
-
-    void Graphics::NewFrame()
-    {
-        //ImGui_ImplGlfw_NewFrame();
-        //ImGui_ImplOpenGL3_NewFrame();
-        //ImGui::NewFrame();
     }
 
     void Graphics::Render()
     {
         //DrawDebug();
-
-        //ImGui::Render();
-        //ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 }

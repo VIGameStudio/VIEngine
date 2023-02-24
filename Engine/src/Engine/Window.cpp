@@ -90,16 +90,6 @@ namespace vi
 		glfwTerminate();
 	}
 
-	void* Window::GetWindowPtr()
-	{
-		return (void*)pWindow;
-	}
-
-	void* Window::GetLoadProc()
-	{
-		return (void*)glfwGetProcAddress;
-	}
-
 	void Window::PollEvents()
 	{
 		glfwPollEvents();
@@ -111,5 +101,15 @@ namespace vi
 	void Window::Display()
 	{
 		glfwSwapBuffers(pWindow);
+	}
+
+	const void* Window::GetWindowPtr()
+	{
+		return (void*)pWindow;
+	}
+
+	const void* Window::GetLoadProc()
+	{
+		return (void*)glfwGetProcAddress;
 	}
 }

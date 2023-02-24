@@ -13,13 +13,14 @@ set (ENGINE_SRCS
 	"src/Engine/Physics.cpp"
 	"src/Engine/Profiler.cpp"
 	"src/Engine/Resource.cpp"
+	"src/Engine/Script.cpp"
 	"src/Engine/Window.cpp"
 
-	"src/Engine/Data/Shader.cpp"
-	"src/Engine/Data/Texture.cpp"
-	"src/Engine/Data/Model.cpp"
+	"src/Engine/Resources/Shader.cpp"
+	"src/Engine/Resources/Texture.cpp"
+	"src/Engine/Resources/Model.cpp"
 )
 
 add_library (Engine STATIC ${ENGINE_SRCS})
-target_link_libraries (Engine cereal fmt stb glm PortAudio glad glfw assimp box2d bullet3)
+target_link_libraries (Engine cereal fmt stb glm PortAudio glad glfw wren assimp box2d bullet3)
 target_include_directories (Engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

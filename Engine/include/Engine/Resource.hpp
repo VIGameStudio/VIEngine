@@ -5,7 +5,7 @@
 #include "Engine/Log.hpp"
 #include "Engine/Math.hpp"
 
-#include <ctti/type_id.hpp>
+//#include <ctti/type_id.hpp>
 
 #include <string>
 #include <vector>
@@ -100,7 +100,7 @@ namespace Gaun
 			: m_filename(filename)
 		{
 			static const std::hash<std::string> s_stringHashFn;
-			m_hash = s_stringHashFn(filename) ^ ctti::type_id<TData>().hash();
+			m_hash = s_stringHashFn(filename);//^ ctti::type_id<TData>().hash();
 		}
 		~Resource() {}
 

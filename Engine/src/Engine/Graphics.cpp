@@ -6,8 +6,8 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_opengl3.h>
+//#include <backends/imgui_impl_glfw.h>
+//#include <backends/imgui_impl_opengl3.h>
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include <stb_image_resize.h>
@@ -629,7 +629,7 @@ namespace Gaun
         Log::Debug(message);
     }
 
-    static bool Init_ImGui(void* pWindow)
+    /*static bool Init_ImGui(void* pWindow)
     {
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
@@ -671,7 +671,7 @@ namespace Gaun
         }
 
         return true;
-    }
+    }*/
 
     static bool Init_GlDebugLog()
     {
@@ -719,11 +719,11 @@ namespace Gaun
             Log::Warning("GL debug output not supported.");
         
         // Initialize ImGui
-        if (!Init_ImGui(Window::GetWindowPtr()))
-        {
-            Log::Error("Failed to initialize ImGui!");
-            return false;
-        }
+        //if (!Init_ImGui(Window::GetWindowPtr()))
+        //{
+        //    Log::Error("Failed to initialize ImGui!");
+        //    return false;
+        //}
 
         Print_GlInfo();
 
@@ -734,25 +734,25 @@ namespace Gaun
 
     void Graphics::Shutdown()
     {
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
+        //ImGui_ImplOpenGL3_Shutdown();
+        //ImGui_ImplGlfw_Shutdown();
+        //ImGui::DestroyContext();
 
         Dispose_DebugDraw();
     }
 
     void Graphics::NewFrame()
     {
-        ImGui_ImplGlfw_NewFrame();
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui::NewFrame();
+        //ImGui_ImplGlfw_NewFrame();
+        //ImGui_ImplOpenGL3_NewFrame();
+        //ImGui::NewFrame();
     }
 
     void Graphics::Render()
     {
         //DrawDebug();
 
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        //ImGui::Render();
+        //ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 }

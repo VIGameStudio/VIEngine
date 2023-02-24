@@ -9,6 +9,6 @@ set (EDITOR_SRCS
 	"src/Editor/EditorWindow.cpp"
 )
 
-add_library (Editor "src/main.cpp" ${EDITOR_SRCS})
+add_executable (Editor "src/main.cpp" ${EDITOR_SRCS})
 target_link_libraries (Editor Engine imgui)
 target_include_directories (Editor PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

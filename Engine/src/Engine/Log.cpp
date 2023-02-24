@@ -2,7 +2,7 @@
 
 #define LOG_LEVEL_OUTPUT 3
 
-namespace Gaun
+namespace vi
 {
 	void Log::PrintImpl(LogLevel level, const std::string& message)
 	{

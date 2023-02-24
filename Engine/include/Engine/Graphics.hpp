@@ -1,24 +1,25 @@
 #pragma once
 
 #include "Engine/Math.hpp"
-#include "Engine/Utils.hpp"
 #include "Engine/Resource.hpp"
-#include "Engine/ResourceData.hpp"
+#include "Engine/Data/Shader.hpp"
+#include "Engine/Data/Texture.hpp"
+#include "Engine/Data/Model.hpp"
 
 #include <string>
 #include <vector>
 #include <unordered_map>
 
-namespace Gaun
+namespace vi
 {
-	using Shader = u32;
-	constexpr Shader INVALID_SHADER = 0;
+	using ShaderHandle = u32;
+	constexpr ShaderHandle INVALID_SHADER = 0;
 
-	using Buffer = u32;
-	constexpr Buffer INVALID_BUFFER = 0;
+	using BufferHandle = u32;
+	constexpr BufferHandle INVALID_BUFFER = 0;
 
-	using Texture = u32;
-	constexpr Texture INVALID_TEXTURE = 0;
+	using TextureHandle = u32;
+	constexpr TextureHandle INVALID_TEXTURE = 0;
 
 	struct Camera
 	{
@@ -71,18 +72,18 @@ namespace Gaun
 			u32 textureSize = 1024;
 		};
 
-		Resource<ShaderData> modelShader;
-		std::vector<Resource<ModelData>> models;
+		Resource<Shader> modelShader;
+		std::vector<Resource<Model>> models;
 
 	private:
 		friend class Graphics;
 		Settings settings;
 
-		Shader shader;
-		Buffer buffer;
+		ShaderHandle shader;
+		BufferHandle buffer;
 
-		Texture animations;
-		Texture textures;
+		TextureHandle animations;
+		TextureHandle textures;
 		
 		struct MeshInfo
 		{
@@ -120,7 +121,7 @@ namespace Gaun
 			f32 animationTime = 0;
 		};
 		std::vector<DrawData> drawData;
-		Buffer drawDataBuffer = INVALID_BUFFER;
+		BufferHandle drawDataBuffer = INVALID_BUFFER;
 
 		struct DrawCommand
 		{
@@ -131,7 +132,7 @@ namespace Gaun
 			u32 baseInstance = 0;
 		};
 		std::vector<DrawCommand> commands;
-		Buffer commandsBuffer = INVALID_BUFFER;
+		BufferHandle commandsBuffer = INVALID_BUFFER;
 
 		struct InstanceData
 		{
@@ -142,7 +143,7 @@ namespace Gaun
 
 		struct DrawBatch
 		{
-			Resource<ModelData> model;
+			Resource<Model> model;
 			DrawData drawData;
 			std::vector<InstanceData> instances;
 		};
@@ -155,8 +156,8 @@ namespace Gaun
 		static void LoadPipeline(Pipeline& pipeline, const Pipeline::Settings& settings);
 		static void UnloadPipeline(Pipeline& pipeline);
 
-		static void DrawStatic(Pipeline& pipeline, const Resource<ModelData>& model, const glm::mat4& matrix);
-		static void DrawSkinned(Pipeline& pipeline, const Resource<ModelData>& model, const glm::mat4& matrix, const std::string& animClip, f32 time);
+		static void DrawStatic(Pipeline& pipeline, const Resource<Model>& model, const glm::mat4& matrix);
+		static void DrawSkinned(Pipeline& pipeline, const Resource<Model>& model, const glm::mat4& matrix, const std::string& animClip, f32 time);
 
 		static void GenerateDrawCommands(Pipeline& pipeline);
 		static void ClearFrame(const Scene& scene);
@@ -169,9 +170,9 @@ namespace Gaun
 		static void ClearDebugCommands();
 
 	private:
-		static void LoadShader(Pipeline& pipeline, const Resource<ShaderData>& resource);
-		static void LoadBuffer(Pipeline& pipeline, const std::vector<Resource<ModelData>>& resources);
-		static void LoadTexture(Pipeline& pipeline, const std::vector<Resource<TextureData>>& resources);
+		static void LoadShader(Pipeline& pipeline, const Resource<Shader>& resource);
+		static void LoadBuffer(Pipeline& pipeline, const std::vector<Resource<Model>>& resources);
+		static void LoadTexture(Pipeline& pipeline, const std::vector<Resource<Texture>>& resources);
 
 	private:
 		friend class Application;

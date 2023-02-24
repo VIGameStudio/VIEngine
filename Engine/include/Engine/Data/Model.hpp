@@ -1,26 +1,15 @@
 #pragma once
 
+#include "Engine/Math.hpp"
 #include "Engine/Resource.hpp"
+#include "Engine/Data/Texture.hpp"
 
 #include <unordered_set>
 #include <unordered_map>
 
-namespace Gaun
+namespace vi
 {
-	struct ShaderData
-	{
-		std::string text;
-	};
-
-	struct TextureData
-	{
-		i32 width = 0;
-		i32 height = 0;
-		i32 channels = 0;
-		std::vector<unsigned char> pixels;
-	};
-
-	struct ModelData
+	struct Model
 	{
 		struct Vertex
 		{
@@ -33,6 +22,7 @@ namespace Gaun
 			glm::vec2 texcoord1 = glm::vec2(0);
 			glm::vec2 texcoord2 = glm::vec2(0);
 			glm::vec2 texcoord3 = glm::vec2(0);
+
 			glm::vec4 bones = glm::vec4(-1);
 			glm::vec4 weights = glm::vec4(0);
 		};
@@ -41,17 +31,17 @@ namespace Gaun
 		{
 			glm::vec4 diffuse = glm::vec4(1.0f);
 
-			Resource<TextureData> diffuseMap;
-			Resource<TextureData> normalMap;
-			Resource<TextureData> emmisionMap;
+			Resource<Texture> diffuseMap;
+			Resource<Texture> normalMap;
+			Resource<Texture> emmisionMap;
 
 			f32 metallic = 0.1f;
 			f32 roughness = 0.9f;
 			f32 ao = 0.5f;
 
-			Resource<TextureData> metallicMap;
-			Resource<TextureData> roughnessMap;
-			Resource<TextureData> aoMap;
+			Resource<Texture> metallicMap;
+			Resource<Texture> roughnessMap;
+			Resource<Texture> aoMap;
 		};
 
 		struct Bone

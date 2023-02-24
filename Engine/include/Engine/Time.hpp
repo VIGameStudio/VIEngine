@@ -2,7 +2,7 @@
 
 #include <chrono>
 
-namespace Gaun
+namespace vi
 {
 	using Clock = std::chrono::high_resolution_clock;
 

@@ -29,7 +29,7 @@
 #define GLSL_VERT_SHADER "#define VERT_SHADER\n"
 #define GLSL_FRAG_SHADER "#define FRAG_SHADER\n"
 
-namespace Gaun
+namespace vi
 {
     static GLuint Load_GlShader(const std::string& vertSrc, const std::string& fragSrc, const std::string& geomSrc)
     {
@@ -74,7 +74,7 @@ namespace Gaun
         return program;
     }
 
-    void Graphics::LoadShader(Pipeline& pipeline, const Resource<ShaderData>& resource)
+    void Graphics::LoadShader(Pipeline& pipeline, const Resource<Shader>& resource)
     {
         ASSERT(resource.HasData() && "Shader resource not loaded!");
 
@@ -85,7 +85,7 @@ namespace Gaun
         pipeline.shader = Load_GlShader(vertSrc, fragSrc, "");
     }
 
-    void Graphics::LoadBuffer(Pipeline& pipeline, const std::vector<Resource<ModelData>>& resources)
+    void Graphics::LoadBuffer(Pipeline& pipeline, const std::vector<Resource<Model>>& resources)
     {
         // Allocate memory
         std::size_t vertexCount = 0;
@@ -103,7 +103,7 @@ namespace Gaun
             }
         }
 
-        std::vector<ModelData::Vertex> vertices(vertexCount);
+        std::vector<Model::Vertex> vertices(vertexCount);
         std::vector<u16> indices(indexCount);
 
         // Copy mesh data into buffers
@@ -128,7 +128,7 @@ namespace Gaun
                 std::size_t hash = res.GetHash() ^ idx++;
                 pipeline.meshInfoMap.insert(std::make_pair(hash, meshInfo));
                 
-                memcpy(&vertices[vertexIdx], mesh.vertices.data(), mesh.vertices.size() * sizeof(ModelData::Vertex));
+                memcpy(&vertices[vertexIdx], mesh.vertices.data(), mesh.vertices.size() * sizeof(Model::Vertex));
                 memcpy(&indices[indexIdx], mesh.indices.data(), mesh.indices.size() * sizeof(u16));
 
                 vertexIdx += mesh.vertices.size();
@@ -144,13 +144,13 @@ namespace Gaun
         GLuint vbo;
         glGenBuffers(1, &vbo);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(ModelData::Vertex), vertices.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Model::Vertex), vertices.data(), GL_STATIC_DRAW);
 
         // Specify vertex attributes for the shader
         for (i32 i = 0; i < 8; i++)
         {
             glEnableVertexAttribArray(i);
-            glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, sizeof(ModelData::Vertex), (GLvoid*)(i * sizeof(glm::vec4)));
+            glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, sizeof(Model::Vertex), (GLvoid*)(i * sizeof(glm::vec4)));
         }
 
         // Create an element buffer and populate it
@@ -178,7 +178,7 @@ namespace Gaun
         pipeline.buffer = vao;
     }
 
-    void Graphics::LoadTexture(Pipeline& pipeline, const std::vector<Resource<TextureData>>& resources)
+    void Graphics::LoadTexture(Pipeline& pipeline, const std::vector<Resource<Texture>>& resources)
     {
         // Generate an array texture
         GLuint tex;
@@ -237,7 +237,7 @@ namespace Gaun
         LoadShader(pipeline, pipeline.modelShader);
         LoadBuffer(pipeline, pipeline.models);
 
-        std::vector<Resource<TextureData>> textures;
+        std::vector<Resource<Texture>> textures;
         for (const auto& res : pipeline.models)
         {
             auto& modelData = res.GetData();
@@ -340,7 +340,7 @@ namespace Gaun
         pipeline.drawBatchMap.clear();
     }
 
-    void Graphics::DrawStatic(Pipeline& pipeline, const Resource<ModelData>& model, const glm::mat4& matrix)
+    void Graphics::DrawStatic(Pipeline& pipeline, const Resource<Model>& model, const glm::mat4& matrix)
     {
         auto it = pipeline.drawBatchMap.find(model.GetHash());
         ASSERT(it != pipeline.drawBatchMap.end() && "There are no caches for model!");
@@ -351,7 +351,7 @@ namespace Gaun
         drawBatch.instances.emplace_back(instance);
     }
 
-    void Graphics::DrawSkinned(Pipeline& pipeline, const Resource<ModelData>& model, const glm::mat4& matrix, const std::string& animClip, f32 time)
+    void Graphics::DrawSkinned(Pipeline& pipeline, const Resource<Model>& model, const glm::mat4& matrix, const std::string& animClip, f32 time)
     {
         auto it = pipeline.drawBatchMap.find(model.GetHash());
         ASSERT(it != pipeline.drawBatchMap.end() && "There are no caches for model!");
@@ -487,9 +487,9 @@ namespace Gaun
         pipeline.commands.clear();
     }
 
-    static Shader s_debugShader = INVALID_SHADER;
-    static Buffer s_debugBuffer = INVALID_BUFFER;
-    static Buffer s_debugBufferObj = INVALID_BUFFER;
+    static ShaderHandle s_debugShader = INVALID_SHADER;
+    static BufferHandle s_debugBuffer = INVALID_BUFFER;
+    static BufferHandle s_debugBufferObj = INVALID_BUFFER;
     static std::vector<glm::mat4> s_debugLines;
 
     static void Init_DebugDraw()
@@ -573,7 +573,7 @@ namespace Gaun
         s_debugLines.clear();
     }
 
-    static cchar GetGlSource(GLenum source)
+    static const char* GetGlSource(GLenum source)
     {
         switch (source)
         {
@@ -588,7 +588,7 @@ namespace Gaun
         return "Unknown";
     }
 
-    static cchar GetGlType(GLenum type)
+    static const char* GetGlType(GLenum type)
     {
         switch (type)
         {
@@ -606,7 +606,7 @@ namespace Gaun
         return "Unknown";
     }
 
-    static cchar GetGlSeverity(GLenum severity)
+    static const char* GetGlSeverity(GLenum severity)
     {
         switch (severity)
         {

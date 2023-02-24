@@ -1,19 +1,19 @@
 #include "Engine/Application.hpp"
-#include "Engine/Audio.hpp"
+#include "Engine/Level.hpp"
 
-using namespace Gaun;
+using namespace vi;
 
 class EditorLevel : public Level
 {
 private:
 	void Start() override {}
 	void Clean() override {}
-	void Update(f32 dt) override {}
+	void Update(float dt) override {}
 	void Render() override {}
 };
 
 int main(int argc, char** argv)
 {
-	Gaun::Application::SetLevel(new EditorLevel());
-	return Gaun::Application::Run(argc, argv);
+	Application::SetLevel(new EditorLevel());
+	return Application::Run(argc, argv);
 }

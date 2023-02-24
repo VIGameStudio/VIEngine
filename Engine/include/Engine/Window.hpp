@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Gaun
+namespace vi
 {
 	class Window
 	{

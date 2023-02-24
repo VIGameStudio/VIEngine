@@ -14,7 +14,7 @@
 
 #define TABLE_SIZE   (200)
 
-namespace Gaun
+namespace vi
 {
     typedef struct
     {

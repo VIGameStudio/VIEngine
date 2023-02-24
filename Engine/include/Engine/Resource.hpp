@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Engine/Assert.hpp"
-#include "Engine/Utils.hpp"
 #include "Engine/Log.hpp"
 #include "Engine/Math.hpp"
 
@@ -11,7 +10,7 @@
 #include <vector>
 #include <unordered_map>
 
-namespace Gaun
+namespace vi
 {
 	class ResourceManager
 	{

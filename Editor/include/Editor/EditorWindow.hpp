@@ -1,5 +1,5 @@
 #pragma once
 
-namespace vi::Editor
+namespace vi
 {
 }

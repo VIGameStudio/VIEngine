@@ -1,8 +1,6 @@
 #pragma once
 
-#include "Engine/Utils.hpp"
-
-namespace Gaun
+namespace vi
 {
 	class Application
 	{
@@ -14,7 +12,7 @@ namespace Gaun
 		static bool Initialize();
 		static void Shutdown();
 
-		static void Update(f32 dt);
+		static void Update(float dt);
 		static void Render();
 	};
 }

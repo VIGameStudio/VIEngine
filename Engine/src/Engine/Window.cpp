@@ -6,7 +6,7 @@
 
 #include <stdlib.h>
 
-namespace Gaun
+namespace vi
 {
 	static GLFWwindow* pWindow = nullptr;
 

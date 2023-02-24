@@ -2,7 +2,7 @@
 
 #include "Engine/Log.hpp"
 
-namespace Gaun
+namespace vi
 {
 	static std::size_t g_order = 0;
 	static std::size_t g_depth = 0;

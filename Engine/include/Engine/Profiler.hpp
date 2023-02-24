@@ -5,7 +5,7 @@
 #include <map>
 #include <string>
 
-namespace Gaun
+namespace vi
 {
 #define PROFILE(category) auto p##__LINE__ = ProfileEntry(category, __FUNCTION__)
 

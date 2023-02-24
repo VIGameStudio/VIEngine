@@ -7,7 +7,7 @@
 #include "Engine/Time.hpp"
 #include "Engine/Profiler.hpp"
 
-namespace Gaun
+namespace vi
 {
 	static Level* pCurrentLevel = nullptr;
 	static Level* pNextLevel = nullptr;

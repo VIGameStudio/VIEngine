@@ -9,12 +9,15 @@ set (ENGINE_SRCS
 	"src/Engine/Application.cpp"
 	"src/Engine/Audio.cpp"
 	"src/Engine/Graphics.cpp"
-	"src/Engine/Level.cpp"
 	"src/Engine/Log.cpp"
 	"src/Engine/Physics.cpp"
 	"src/Engine/Profiler.cpp"
 	"src/Engine/Resource.cpp"
 	"src/Engine/Window.cpp"
+
+	"src/Engine/Data/Shader.cpp"
+	"src/Engine/Data/Texture.cpp"
+	"src/Engine/Data/Model.cpp"
 )
 
 add_library (Engine STATIC ${ENGINE_SRCS})

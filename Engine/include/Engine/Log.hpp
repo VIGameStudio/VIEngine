@@ -2,7 +2,7 @@
 
 #include <fmt/core.h>
 
-namespace Gaun
+namespace vi
 {
 	enum struct LogLevel { DEBUG, INFO, WARNING, ERROR };
 

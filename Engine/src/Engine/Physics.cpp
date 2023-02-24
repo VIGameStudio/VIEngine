@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-namespace Gaun
+namespace vi
 {
 	void Physics::Test()
 	{

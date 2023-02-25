@@ -1,3 +1,4 @@
+#include "Editor/EditorScript.hpp"
 #include "Editor/ImGuiImpl.hpp"
 
 #include "Engine/Application.hpp"
@@ -6,17 +7,22 @@
 #include "Engine/Script.hpp"
 
 #include "Engine/Resource.hpp"
-#include "Engine/Resources/Shader.hpp"
-
-#include <wren.hpp>
 
 using namespace vi;
 
-
-
-bool Application::Initialize()
+static double WrenCos(double x)
 {
-	if (!Window::Create())
+	return cos(x);
+}
+
+static double WrenSin(double x)
+{
+	return sin(x);
+}
+
+bool Application::Initialize(const AppConfig& config)
+{
+	if (!Window::Create(config.winTitle, config.winWidth, config.winHeight, config.winFullscreen, config.winVSync))
 	{
 		Log::Error("Failed to create window!");
 		return false;
@@ -28,9 +34,15 @@ bool Application::Initialize()
 		return false;
 	}
 
-	if (!Script::Initialize())
+	if (!ScriptManager::Initialize())
 	{
-		Log::Error("Failed to initialize scripting!");
+		Log::Error("Failed to initialize script manager!");
+		return false;
+	}
+
+	if (!EditorScript::Initialize())
+	{
+		Log::Error("Failed to initialize editor script module!");
 		return false;
 	}
 
@@ -40,6 +52,18 @@ bool Application::Initialize()
 		return false;
 	}
 
+	ScriptManager::BindFunction<decltype(&WrenCos), &WrenCos>(true, "main::Math::cos(_)_s");
+	ScriptManager::BindFunction<decltype(&WrenCos), &WrenCos>(true, "main::Math::sin(_)_s");
+
+	ScriptManager::Interpret(
+		"main",
+		"class Math {\n"
+		"  foreign static cos(num)\n"
+		"  foreign static sin(num)\n"
+		"}\n"
+		"System.print(\"%(Math.cos(1.570796326))\")\n"
+	);
+
 	return true;
 }
 
@@ -47,7 +71,7 @@ void Application::Shutdown()
 {
 	ImGuiImpl::Shutdown();
 
-	Script::Shutdown();
+	ScriptManager::Shutdown();
 	Graphics::Shutdown();
 	Window::Destroy();
 }
@@ -71,7 +95,11 @@ void Application::Render()
 int main(int argc, char** argv)
 {
 	ResourceManager::RegisterPath(EDITOR_ASSETS_PATH);
-	ResourceManager::RegisterPath(GAME_ASSETS_PATH);
 
-	return Application::Run(argc, argv);
+	AppConfig config;
+	config.winTitle = "Editor";
+	config.winWidth = 800;
+	config.winHeight = 600;
+
+	return Application::Run(config, argc, argv);
 }

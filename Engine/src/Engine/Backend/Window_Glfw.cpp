@@ -25,7 +25,7 @@ namespace vi
 		Log::Error("GLFW ({}) {}", i, c);
 	}
 
-	bool Window::Create()
+	bool Window::Create(const char* title, int width, int height, bool fullscreen, bool vsync)
 	{
 #ifdef __arm__
 		if (putenv((char*)"DISPLAY=:0"))
@@ -49,8 +49,6 @@ namespace vi
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
 		glfwWindowHint(GLFW_SAMPLES, 8);
-
-		pWindow = glfwCreateWindow(800, 600, "Gauntlet", NULL, NULL);
 #endif
 
 #ifdef __arm__
@@ -59,17 +57,24 @@ namespace vi
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
 		//glfwWindowHint(GLFW_SAMPLES, 2);
-
-		GLFWmonitor* pMonitor = glfwGetPrimaryMonitor();
-		const GLFWvidmode* pMode = glfwGetVideoMode(pMonitor);
-
-		glfwWindowHint(GLFW_RED_BITS, pMode->redBits);
-		glfwWindowHint(GLFW_GREEN_BITS, pMode->greenBits);
-		glfwWindowHint(GLFW_BLUE_BITS, pMode->blueBits);
-		glfwWindowHint(GLFW_REFRESH_RATE, pMode->refreshRate);
-
-		pWindow = glfwCreateWindow(pMode->width, pMode->height, "Gauntlet", pMonitor, NULL);
 #endif
+
+		if (fullscreen)
+		{
+			GLFWmonitor* pMonitor = glfwGetPrimaryMonitor();
+			const GLFWvidmode* pMode = glfwGetVideoMode(pMonitor);
+
+			glfwWindowHint(GLFW_RED_BITS, pMode->redBits);
+			glfwWindowHint(GLFW_GREEN_BITS, pMode->greenBits);
+			glfwWindowHint(GLFW_BLUE_BITS, pMode->blueBits);
+			glfwWindowHint(GLFW_REFRESH_RATE, pMode->refreshRate);
+
+			pWindow = glfwCreateWindow(pMode->width, pMode->height, title, pMonitor, NULL);
+		}
+		else
+		{
+			pWindow = glfwCreateWindow(width, height, title, NULL, NULL);
+		}
 
 		if (pWindow == NULL)
 		{
@@ -79,7 +84,7 @@ namespace vi
 		}
 
 		glfwMakeContextCurrent(pWindow);
-		glfwSwapInterval(1);
+		glfwSwapInterval(vsync ? 1 : 0);
 
 		return true;
 	}

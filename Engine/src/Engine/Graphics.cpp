@@ -1,691 +1,326 @@
 #include "Engine/Graphics.hpp"
 
-#include "Engine/Assert.hpp"
-#include "Engine/Log.hpp"
-#include "Engine/Window.hpp"
+#include "Engine/Resource.hpp"
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
+#include <fstream>
+#include <sstream>
 
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include <stb_image_resize.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+#include <cstring>
 
-#if defined WIN32
-#define GL_BACKEND
-#elif defined __arm__
-#define GLES_BACKEND
-#endif
-
-#if defined GL_BACKEND
-#define GLSL_VERSION "#version 460 core\n"
-#elif defined GLES_BACKEND
-#define GLSL_VERSION "#version 310 es\n"
-#endif
-
-#define GLSL_HEADER "\n"
-
-#define GLSL_VERT_SHADER "#define VERT_SHADER\n"
-#define GLSL_FRAG_SHADER "#define FRAG_SHADER\n"
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 namespace vi
 {
-    static GLuint Load_GlShader(const std::string& vertSrc, const std::string& fragSrc, const std::string& geomSrc)
+    template<>
+    bool ResourceData<Shader>::LoadImpl(const std::string& filename, Shader& data)
     {
-        // Compile vertex shader
-        GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-        const char* vertSrc_cstr = vertSrc.c_str();
-        glShaderSource(vertexShader, 1, &vertSrc_cstr, NULL);
-        glCompileShader(vertexShader);
-
-        i32 success;
-        char infoLog[1024];
-        glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-        if (!success)
-        {
-            glGetShaderInfoLog(vertexShader, 1024, NULL, infoLog);
-            Log::Error("SHADER_COMPILATION_ERROR of type: {}", infoLog);
-        }
-
-        // Compile fragment shader
-        GLuint fragmentShader(glCreateShader(GL_FRAGMENT_SHADER));
-        const char* fragSrc_cstr = fragSrc.c_str();
-        glShaderSource(fragmentShader, 1, &fragSrc_cstr, NULL);
-        glCompileShader(fragmentShader);
-
-        glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-        if (!success)
-        {
-            glGetShaderInfoLog(fragmentShader, 1024, NULL, infoLog);
-            Log::Error("SHADER_COMPILATION_ERROR of type: {}", infoLog);
-        }
-
-        // Link vertex and fragment shader together
-        GLuint program = glCreateProgram();
-        glAttachShader(program, vertexShader);
-        glAttachShader(program, fragmentShader);
-        glLinkProgram(program);
-
-        // Delete shaders objects
-        glDeleteShader(vertexShader);
-        glDeleteShader(fragmentShader);
-
-        return program;
-    }
-
-    void Graphics::LoadShader(Pipeline& pipeline, const Resource<Shader>& resource)
-    {
-        ASSERT(resource.HasData() && "Shader resource not loaded!");
-
-        const std::string src = resource.GetData().text;
-        const std::string vertSrc = fmt::format("{}{}{}{}", GLSL_VERSION, GLSL_HEADER, GLSL_VERT_SHADER, src);
-        const std::string fragSrc = fmt::format("{}{}{}{}", GLSL_VERSION, GLSL_HEADER, GLSL_FRAG_SHADER, src);
-
-        pipeline.shader = Load_GlShader(vertSrc, fragSrc, "");
-    }
-
-    void Graphics::LoadBuffer(Pipeline& pipeline, const std::vector<Resource<Model>>& resources)
-    {
-        // Allocate memory
-        std::size_t vertexCount = 0;
-        std::size_t indexCount = 0;
-
-        for (const auto& res : resources)
-        {
-            ASSERT(res.HasData() && "Mesh resource not loaded!");
-            const auto& modelData = res.GetData();
-
-            for (const auto& mesh : modelData.meshes)
-            {
-                vertexCount += mesh.vertices.size();
-                indexCount += mesh.indices.size();
-            }
-        }
-
-        std::vector<Model::Vertex> vertices(vertexCount);
-        std::vector<u16> indices(indexCount);
-
-        // Copy mesh data into buffers
-        std::size_t vertexIdx = 0;
-        std::size_t indexIdx = 0;
-        for (const auto& res : resources)
-        {
-            Pipeline::DrawBatch drawBatch;
-            drawBatch.model = res;
-            pipeline.drawBatchMap.insert(std::make_pair(res.GetHash(), drawBatch));
-
-            const auto& modelData = res.GetData();
-
-            std::size_t idx = 0;
-            for (const auto& mesh : modelData.meshes)
-            {
-                Pipeline::MeshInfo meshInfo;
-                meshInfo.primCount = (u32)mesh.indices.size();
-                meshInfo.firstIndex = (u32)indexIdx;
-                meshInfo.baseVertex = (u32)vertexIdx;
-
-                std::size_t hash = res.GetHash() ^ idx++;
-                pipeline.meshInfoMap.insert(std::make_pair(hash, meshInfo));
-                
-                memcpy(&vertices[vertexIdx], mesh.vertices.data(), mesh.vertices.size() * sizeof(Model::Vertex));
-                memcpy(&indices[indexIdx], mesh.indices.data(), mesh.indices.size() * sizeof(u16));
-
-                vertexIdx += mesh.vertices.size();
-                indexIdx += mesh.indices.size();
-            }
-        }
-
-        GLuint vao;
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-
-        // Create a vertex buffer object
-        GLuint vbo;
-        glGenBuffers(1, &vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Model::Vertex), vertices.data(), GL_STATIC_DRAW);
-
-        // Specify vertex attributes for the shader
-        for (i32 i = 0; i < 8; i++)
-        {
-            glEnableVertexAttribArray(i);
-            glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, sizeof(Model::Vertex), (GLvoid*)(i * sizeof(vec4)));
-        }
-
-        // Create an element buffer and populate it
-        GLuint ebo;
-        glGenBuffers(1, &ebo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(u16), indices.data(), GL_STATIC_DRAW);
-
-        // Generate per instance buffer
-        glGenBuffers(1, &pipeline.drawDataBuffer);
-        glBindBuffer(GL_ARRAY_BUFFER, pipeline.drawDataBuffer);
-
-        for (u32 i = 0; i < 8; i++)
-        {
-            glEnableVertexAttribArray(8 + i);
-            glVertexAttribPointer(8 + i, 4, GL_FLOAT, GL_FALSE, sizeof(Pipeline::DrawData), (GLvoid*)(i * sizeof(vec4)));
-            glVertexAttribDivisor(8 + i, 1);
-        }
-
-        // Generate indirect command buffer
-        glGenBuffers(1, &pipeline.commandsBuffer);
-
-        glBindVertexArray(0);
-
-        pipeline.buffer = vao;
-    }
-
-    void Graphics::LoadTexture(Pipeline& pipeline, const std::vector<Resource<Texture>>& resources)
-    {
-        // Generate an array texture
-        GLuint tex;
-        glGenTextures(1, &tex);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, tex);
-
-        // Create storage for the texture
-        glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, pipeline.settings.textureSize, pipeline.settings.textureSize, (GLsizei)resources.size());
-        //glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_SRGB8_ALPHA8, pipeline.settings.textureSize, pipeline.settings.textureSize, (GLsizei)resources.size());
-
-        auto pData = new unsigned char[(long long)4 * pipeline.settings.textureSize * pipeline.settings.textureSize];
-        for (u32 i = 0; i < resources.size(); ++i)
-        {
-            const auto& res = resources[i];
-            
-//#define DEBUG_GRID_TEXTURE
-#ifdef DEBUG_GRID_TEXTURE
-            // Texture grid for debugging
-            uvec3 color = linearRand(uvec3(0), uvec3(255));
-            for (GLsizei y = 0; y < pipeline.settings.textureSize; ++y)
-                for (GLsizei x = 0; x < pipeline.settings.textureSize; ++x)
-                    for (GLsizei k = 0; k < 4; ++k)
-                        pData[y * pipeline.settings.textureSize * 4 + x * 4 + k] = k == 3 ? 255 : (((x / 16) + (y / 16)) % 2) == 0 ? color[k] : 0;
-#else
-            ASSERT(res.HasData() && "Texture resource not loaded!");
-            const auto& data = res.GetData();
-
-            ASSERT(data.channels == 4 && "Only RGBA textures can be loaded!");
-            stbir_resize_uint8(data.pixels.data(), data.width, data.height, 0, pData, pipeline.settings.textureSize, pipeline.settings.textureSize, 0, 4);
-#endif
-
-            glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, pipeline.settings.textureSize, pipeline.settings.textureSize, 1, GL_RGBA, GL_UNSIGNED_BYTE, pData);
-
-            Pipeline::TextureInfo textureInfo;
-            textureInfo.index = i;
-            pipeline.textureInfoMap.insert(std::make_pair(res.GetHash(), textureInfo));
-        }
-        delete[] pData;
-
-        glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-
-        pipeline.textures = tex;
-    }
-
-    void Graphics::LoadPipeline(Pipeline& pipeline, const Pipeline::Settings& settings)
-    {
-        pipeline.settings = settings;
-
-        LoadShader(pipeline, pipeline.modelShader);
-        LoadBuffer(pipeline, pipeline.models);
-
-        std::vector<Resource<Texture>> textures;
-        for (const auto& res : pipeline.models)
-        {
-            auto& modelData = res.GetData();
-            for (const auto& material : modelData.materials)
-            {
-                // Diffuse maps
-                if (material.diffuseMap.HasData())
-                    textures.emplace_back(material.diffuseMap);
-
-                if (material.normalMap.HasData())
-                    textures.emplace_back(material.normalMap);
-
-                if (material.emmisionMap.HasData())
-                    textures.emplace_back(material.emmisionMap);
-
-                // Pbr maps
-                if (material.metallicMap.HasData())
-                    textures.emplace_back(material.metallicMap);
-
-                if (material.roughnessMap.HasData())
-                    textures.emplace_back(material.roughnessMap);
-
-                if (material.aoMap.HasData())
-                    textures.emplace_back(material.aoMap);
-            }
-        }
-
-        LoadTexture(pipeline, textures);
-
-        // Link resources
-        for (auto& it : pipeline.drawBatchMap)
-        {
-            auto& drawBatch = it.second;
-            const auto& modelData = drawBatch.model.GetData();
-
-            for (size_t idx = 0; idx < modelData.meshes.size(); idx++)
-            {
-                const auto& mesh = modelData.meshes[idx];
-                if (mesh.materialIdx >= 0)
-                {
-                    ASSERT(modelData.materials.size() > mesh.materialIdx && "Model does not contain material index!");
-                    const auto& material = modelData.materials[mesh.materialIdx];
-
-                    drawBatch.drawData.diffuse = material.diffuse;
-                    drawBatch.drawData.metallic = material.metallic;
-                    drawBatch.drawData.roughness = material.roughness;
-                    drawBatch.drawData.ao = material.ao;
-
-                    // Diffuse maps
-                    if (material.diffuseMap.HasData())
-                    {
-                        auto it2 = pipeline.textureInfoMap.find(material.diffuseMap.GetHash());
-                        ASSERT(it2 != pipeline.textureInfoMap.end() && "No texture info for draw call!");
-                        drawBatch.drawData.diffuseMap = (f32)it2->second.index;
-                    }
-
-                    if (material.normalMap.HasData())
-                    {
-                        auto it2 = pipeline.textureInfoMap.find(material.normalMap.GetHash());
-                        ASSERT(it2 != pipeline.textureInfoMap.end() && "No texture info for draw call!");
-                        drawBatch.drawData.normalMap = (f32)it2->second.index;
-                    }
-
-                    if (material.diffuseMap.HasData())
-                    {
-                        auto it2 = pipeline.textureInfoMap.find(material.diffuseMap.GetHash());
-                        ASSERT(it2 != pipeline.textureInfoMap.end() && "No texture info for draw call!");
-                        drawBatch.drawData.emmisionMap = (f32)it2->second.index;
-                    }
-
-                    // Pbr maps
-                    if (material.metallicMap.HasData())
-                    {
-                        auto it2 = pipeline.textureInfoMap.find(material.metallicMap.GetHash());
-                        ASSERT(it2 != pipeline.textureInfoMap.end() && "No texture info for draw call!");
-                        drawBatch.drawData.metallicMap = (f32)it2->second.index;
-                    }
-
-                    if (material.roughnessMap.HasData())
-                    {
-                        auto it2 = pipeline.textureInfoMap.find(material.roughnessMap.GetHash());
-                        ASSERT(it2 != pipeline.textureInfoMap.end() && "No texture info for draw call!");
-                        drawBatch.drawData.roughnessMap = (f32)it2->second.index;
-                    }
-
-                    if (material.aoMap.HasData())
-                    {
-                        auto it2 = pipeline.textureInfoMap.find(material.aoMap.GetHash());
-                        ASSERT(it2 != pipeline.textureInfoMap.end() && "No texture info for draw call!");
-                        drawBatch.drawData.aoMap = (f32)it2->second.index;
-                    }
-                }
-            }
-        }
-    }
-
-    void Graphics::UnloadPipeline(Pipeline& pipeline)
-    {
-        ClearDrawCommands(pipeline);
-        pipeline.drawBatchMap.clear();
-    }
-
-    void Graphics::DrawStatic(Pipeline& pipeline, const Resource<Model>& model, const mat4& matrix)
-    {
-        auto it = pipeline.drawBatchMap.find(model.GetHash());
-        ASSERT(it != pipeline.drawBatchMap.end() && "There are no caches for model!");
-        auto& drawBatch = it->second;
-
-        Pipeline::InstanceData instance;
-        instance.matrix = matrix;
-        drawBatch.instances.emplace_back(instance);
-    }
-
-    void Graphics::DrawSkinned(Pipeline& pipeline, const Resource<Model>& model, const mat4& matrix, const std::string& animClip, f32 time)
-    {
-        auto it = pipeline.drawBatchMap.find(model.GetHash());
-        ASSERT(it != pipeline.drawBatchMap.end() && "There are no caches for model!");
-        auto& drawBatch = it->second;
-
-        Pipeline::InstanceData instance;
-        instance.matrix = matrix;
-        instance.animClip = animClip;
-        instance.time = time;
-        drawBatch.instances.emplace_back(instance);
-    }
-
-    void Graphics::GenerateDrawCommands(Pipeline& pipeline)
-    {
-        u32 baseInstance = 0;
-        for (const auto& it : pipeline.drawBatchMap)
-        {
-            auto& drawBatch = it.second;
-            auto& modelData = drawBatch.model.GetData();
-
-            for (size_t idx = 0; idx < modelData.meshes.size(); idx++)
-            {
-                Pipeline::DrawData drawData = drawBatch.drawData;
-                for (const auto& instance : drawBatch.instances)
-                {
-                    drawData.matrix = instance.matrix;
-                    pipeline.drawData.emplace_back(drawData);
-                }
-
-                std::size_t hash = drawBatch.model.GetHash() ^ idx;
-                auto it3 = pipeline.meshInfoMap.find(hash);
-                ASSERT(it3 != pipeline.meshInfoMap.end() && "No mesh info for draw call!");
-                const auto& meshInfo = it3->second;
-
-                Pipeline::DrawCommand cmd;
-                cmd.primCount = meshInfo.primCount;
-                cmd.firstIndex = meshInfo.firstIndex;
-                cmd.baseVertex = meshInfo.baseVertex;
-                cmd.instanceCount = (u32)drawBatch.instances.size();
-                cmd.baseInstance = baseInstance;
-                baseInstance += cmd.instanceCount;
-
-                pipeline.commands.emplace_back(cmd);
-            }
-        }
-
-        //glBindVertexArray(pipeline.buffer);
-        
-        // Update model matrices and material properties
-        //if (pipeline.drawDataBuffer == INVALID_BUFFER)
-        //    glGenBuffers(1, &pipeline.drawDataBuffer);
-
-        glBindBuffer(GL_ARRAY_BUFFER, pipeline.drawDataBuffer);
-        glBufferData(GL_ARRAY_BUFFER, pipeline.drawData.size() * sizeof(Pipeline::DrawData), pipeline.drawData.data(), GL_DYNAMIC_DRAW);
-
-        /*for (u32 i = 0; i < 8; i++)
-        {
-            glEnableVertexAttribArray(8 + i);
-            glVertexAttribPointer(8 + i, 4, GL_FLOAT, GL_FALSE, sizeof(Pipeline::DrawData), (GLvoid*)(i * sizeof(vec4)));
-            glVertexAttribDivisor(8 + i, 1);
-        }*/
-
-        // Generate draw commands
-        //if (pipeline.commandsBuffer == INVALID_BUFFER)
-        //    glGenBuffers(1, &pipeline.commandsBuffer);
-
-        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, pipeline.commandsBuffer);
-        glBufferData(GL_DRAW_INDIRECT_BUFFER, pipeline.commands.size() * sizeof(Pipeline::DrawCommand), pipeline.commands.data(), GL_DYNAMIC_DRAW);
-
-        //glBindBuffer(GL_ARRAY_BUFFER, pipeline.commandsBuffer);
-        //glEnableVertexAttribArray(12);
-        //glVertexAttribIPointer(12, 1, GL_UNSIGNED_INT, sizeof(Pipeline::DrawCommand), (void*)(4 * sizeof(u32)));
-        //glVertexAttribDivisor(12, 1);
-
-        //glBindVertexArray(0);
-    }
-
-    void Graphics::ClearFrame(const Scene& scene)
-    {
-        i32 width, height;
-        Window::GetSize(&width, &height);
-
-        glViewport(0, 0, width, height);
-        const vec4& c = scene.camera.clearColor;
-        glClearColor(c.r, c.g, c.b, c.a);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    }
-
-    void Graphics::DrawCommands(const Scene& scene, const Pipeline& pipeline)
-    {
-        glCullFace(GL_CCW);
-        glEnable(GL_CULL_FACE);
-        glEnable(GL_DEPTH);
-        glEnable(GL_DEPTH_TEST);
-
-        glBindVertexArray(pipeline.buffer);
-        glUseProgram(pipeline.shader);
-
-        glUniformMatrix4fv(0, 1, GL_FALSE, value_ptr(scene.camera.view));
-        glUniformMatrix4fv(1, 1, GL_FALSE, value_ptr(scene.camera.projection));
-
-        glUniform3fv(2, 1, value_ptr(scene.camera.position));
-        glUniform3fv(3, 1, value_ptr(scene.dirLight.direction));
-        glUniform3fv(4, 1, value_ptr(scene.dirLight.color));
-        glUniform1f(5, scene.dirLight.intensity);
-
-        //glActiveTexture(GL_TEXTURE0);
-        //glBindTexture(GL_TEXTURE_2D_ARRAY, pipeline.animations);
-        //glUniform1i(0, 0);
-
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, pipeline.textures);
-        glUniform1i(1, 0);
-
-#if defined GL_BACKEND
-        glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_SHORT, (void*)0, (GLsizei)pipeline.commands.size(), 0);
-
-#elif defined GLES_BACKEND
-        for (u32 i = 0; i < pipeline.commands.size(); i++)
-            glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_SHORT, (void*)(i * sizeof(Pipeline::DrawCommand)));
-#endif
-
-        glUseProgram(0);
-        glBindVertexArray(0);
-    }
-
-    void Graphics::ClearDrawCommands(Pipeline& pipeline)
-    {
-        for (auto& it : pipeline.drawBatchMap)
-            it.second.instances.clear();
-
-        pipeline.drawData.clear();
-        pipeline.commands.clear();
-    }
-
-    static ShaderHandle s_debugShader = INVALID_SHADER;
-    static BufferHandle s_debugBuffer = INVALID_BUFFER;
-    static BufferHandle s_debugBufferObj = INVALID_BUFFER;
-    static std::vector<mat4> s_debugLines;
-
-    static void Init_DebugDraw()
-    {
-        static const char* src =
-            "#ifdef VERT_SHADER\n"
-            "layout (location = 0) in vec4 iPosition;\n"
-            "layout (location = 1) in vec4 iColor;\n"
-            "layout (location = 0) out vec4 ioColor;\n"
-            "layout (location = 0) uniform mat4 uVP;\n"
-            "void main() { ioColor = iColor; gl_Position = uVP * vec4(iPosition.xyz, 1.0); }\n"
-            "#endif\n"
-            "#ifdef FRAG_SHADER\n"
-            "precision mediump float;\n"
-            "layout (location = 0) in vec4 ioColor;\n"
-            "layout (location = 0) out vec4 oFragColor;\n"
-            "void main() { oFragColor = ioColor; }\n"
-            "#endif\n";
-
-        const std::string vertSrc = fmt::format("{}{}{}{}", GLSL_VERSION, GLSL_HEADER, GLSL_VERT_SHADER, src);
-        const std::string fragSrc = fmt::format("{}{}{}{}", GLSL_VERSION, GLSL_HEADER, GLSL_FRAG_SHADER, src);
-        s_debugShader = Load_GlShader(vertSrc, fragSrc, "");
-
-        GLuint vao;
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-
-        GLuint vbo;
-        glGenBuffers(1, &vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        for (i32 i = 0; i < 2; i++)
-        {
-            glEnableVertexAttribArray(i);
-            glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, 2 * sizeof(vec4), (GLvoid*)(i * sizeof(vec4)));
-        }
-
-        glBindVertexArray(0);
-        s_debugBufferObj = vbo;
-        s_debugBuffer = vao;
-    }
-
-    static void Dispose_DebugDraw()
-    {
-        glDeleteProgram(s_debugShader);
-        glDeleteBuffers(1, &s_debugBuffer);
-    }
-
-    void Graphics::DrawDebugLine(const vec3& p1, const vec3& p2, const vec4& color)
-    {
-        mat4 m;
-        m[0] = vec4(p1, 0.0f); m[1] = color;
-        m[2] = vec4(p2, 0.0f); m[3] = color;
-        s_debugLines.emplace_back(m);
-    }
-
-    void Graphics::DrawDebugShape(const std::vector<mat4>& lines)
-    {
-        s_debugLines.reserve(std::max(s_debugLines.capacity(), s_debugLines.size() + lines.size()));
-        s_debugLines.insert(s_debugLines.end(), lines.begin(), lines.end());
-    }
-
-    void Graphics::DrawDebugCommands(const Scene& scene)
-    {
-        glBindBuffer(GL_ARRAY_BUFFER, s_debugBufferObj);
-        glBufferData(GL_ARRAY_BUFFER, s_debugLines.size() * sizeof(mat4), s_debugLines.data(), GL_DYNAMIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        glBindVertexArray(s_debugBuffer);
-        
-        glUseProgram(s_debugShader);
-        mat4 vp = scene.camera.projection * scene.camera.view;
-        glUniformMatrix4fv(0, 1, GL_FALSE, value_ptr(vp));
-        glDrawArrays(GL_LINES, 0, 2 * (GLsizei)s_debugLines.size());
-
-        glUseProgram(0);
-        glBindVertexArray(0);
-    }
-
-    void Graphics::ClearDebugCommands()
-    {
-        s_debugLines.clear();
-    }
-
-    static const char* GetGlSource(GLenum source)
-    {
-        switch (source)
-        {
-        case GL_DEBUG_SOURCE_API:               return "API";
-        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:     return "Window System";
-        case GL_DEBUG_SOURCE_SHADER_COMPILER:   return "Shader Compiler";
-        case GL_DEBUG_SOURCE_THIRD_PARTY:       return "Third Party";
-        case GL_DEBUG_SOURCE_APPLICATION:       return "Application";
-        case GL_DEBUG_SOURCE_OTHER:             return "Other";
-        }
-
-        return "Unknown";
-    }
-
-    static const char* GetGlType(GLenum type)
-    {
-        switch (type)
-        {
-        case GL_DEBUG_TYPE_ERROR:               return "Error";
-        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: return "Deprecated Behaviour";
-        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  return "Undefined Behaviour";
-        case GL_DEBUG_TYPE_PORTABILITY:         return "Portability";
-        case GL_DEBUG_TYPE_PERFORMANCE:         return "Performance";
-        case GL_DEBUG_TYPE_MARKER:              return "Marker";
-        case GL_DEBUG_TYPE_PUSH_GROUP:          return "Push Group";
-        case GL_DEBUG_TYPE_POP_GROUP:           return "Pop Group";
-        case GL_DEBUG_TYPE_OTHER:               return "Other";
-        }
-
-        return "Unknown";
-    }
-
-    static const char* GetGlSeverity(GLenum severity)
-    {
-        switch (severity)
-        {
-        case GL_DEBUG_SEVERITY_HIGH:            return "High";
-        case GL_DEBUG_SEVERITY_MEDIUM:          return "Medium";
-        case GL_DEBUG_SEVERITY_LOW:             return "Low";
-        case GL_DEBUG_SEVERITY_NOTIFICATION:    return "Notification";
-        }
-
-        return "Unknown";
-    }
-
-    static void APIENTRY glDebugOutput(GLenum source, GLenum type, u32 id, GLenum severity, GLsizei length, const char* message, const void* userParam)
-    {
-        // Ignore non-significant error/warning codes
-        if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
-            return;
-
-        Log::Debug("GL message ID:({}) - Source:({}) - Type:({}) - Severity:({})", id, GetGlSource(source), GetGlType(type), GetGlSeverity(severity));
-        Log::Debug(message);
-    }
-
-    static bool Init_GlDebugLog()
-    {
-        i32 flags;
-        glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
-        if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
-        {
-            // Initialize debug output
-            glEnable(GL_DEBUG_OUTPUT);
-            glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-            glDebugMessageCallback(glDebugOutput, nullptr);
-            glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
-            
-            return true;
-        }
-        
-        return false;
-    }
-
-    static void Print_GlInfo()
-    {
-        i32 numOfExtensions;
-        glGetIntegerv(GL_NUM_EXTENSIONS, &numOfExtensions);
-        Log::Debug("GL Supported extensions ({}):", numOfExtensions);
-        for (i32 i = 0; i < numOfExtensions; i++)
-        {
-            Log::Debug((const char*)glGetStringi(GL_EXTENSIONS, i));
-        }
-    }
-
-    bool Graphics::Initialize(const void* pLoadProc)
-    {
-        // Setup GL load proc
-#if defined GL_BACKEND
-        if (!gladLoadGLLoader((GLADloadproc)pLoadProc))
-#elif defined GLES_BACKEND
-        if (!gladLoadGLES2Loader((GLADloadproc)pLoadProc))
-#endif
-        {
-            Log::Error("Failed to initialize GLAD!");
+        std::ifstream is(ResourceManager::GetFilePath(filename));
+        if (is.fail())
             return false;
-        }
 
-        if (!Init_GlDebugLog())
-            Log::Warning("GL debug output not supported.");
-        
-        Print_GlInfo();
+        std::stringstream ss;
+        ss << is.rdbuf();
 
-        Init_DebugDraw();
+        data.text = ss.str();
+        return true;
+    }
+
+    template<>
+    bool ResourceData<Texture>::LoadImpl(const std::string& filename, Texture& data)
+    {
+        stbi_set_flip_vertically_on_load(true);
+        auto pData = stbi_load(ResourceManager::GetFilePath(filename).c_str(), &data.width, &data.height, &data.channels, 4);
+        if (pData == nullptr)
+            return false;
+
+        data.pixels.resize((i64)data.width * (i64)data.height * 4);
+        memcpy(data.pixels.data(), pData, data.pixels.size());
+        stbi_image_free(pData);
 
         return true;
     }
 
-    void Graphics::Shutdown()
+    static glm::mat4 aiMatrix4x4_to_glmmat4(const aiMatrix4x4& m)
     {
-        Dispose_DebugDraw();
+        glm::mat4 mm = glm::mat4(1);
+        for (std::size_t i = 0; i < 4; ++i)
+            for (std::size_t j = 0; j < 4; ++j)
+                mm[i][j] = m[i][j];
+        return mm;
     }
 
-    void Graphics::Render()
+    static void MeshDataLoadImpl_AssimpLoadNode(const aiScene* pScene, const aiNode* pNode, Model& data)
     {
-        //DrawDebug();
+        for (std::size_t i = 0; i < pNode->mNumChildren; ++i)
+        {
+            auto pChild = pNode->mChildren[i];
+            MeshDataLoadImpl_AssimpLoadNode(pScene, pChild, data);
+        }
+
+        if (pNode->mNumMeshes == 0)
+            return;
+
+        for (std::size_t m = 0; m < pNode->mNumMeshes; ++m)
+        {
+            auto pMesh = pScene->mMeshes[pNode->mMeshes[m]];
+            Model::Mesh mesh;
+
+            if (pScene->HasMaterials())
+            {
+                mesh.materialIdx = pMesh->mMaterialIndex;
+            }
+
+            // Extract vertex data
+            mesh.vertices.resize(pMesh->mNumVertices);
+            for (std::size_t v = 0; v < pMesh->mNumVertices; ++v)
+            {
+                auto& vert = mesh.vertices[v];
+
+                const auto& p = pMesh->mVertices[v];
+                vert.position = glm::vec4(p.x, p.y, p.z, 1.0f);
+
+                if (pMesh->HasNormals())
+                {
+                    const auto& n = pMesh->mNormals[v];
+                    vert.normal = glm::vec4(n.x, n.y, n.z, 1.0f);
+                }
+
+                if (pMesh->HasTangentsAndBitangents())
+                {
+                    const auto& t = pMesh->mTangents[v];
+                    const auto& bt = pMesh->mBitangents[v];
+                    vert.tangent = glm::vec4(t.x, t.y, t.z, 1.0f);
+                    vert.bitangent = glm::vec4(bt.x, bt.y, bt.z, 0.0f);
+                }
+
+                if (pMesh->HasTextureCoords(0))
+                {
+                    const auto& tc = pMesh->mTextureCoords[0][v];
+                    vert.texcoord0 = glm::vec2(tc.x, tc.y);
+                }
+
+                if (pMesh->HasVertexColors(0))
+                {
+                    const auto& c = pMesh->mColors[0][v];
+                    vert.position.w = c.r;
+                    vert.normal.w = c.g;
+                    vert.tangent.w = c.b;
+                    vert.bitangent.w = c.a;
+                }
+            }
+
+            // Extract bone data
+            if (pMesh->HasBones())
+            {
+                for (std::size_t b = 0; b < pMesh->mNumBones; ++b)
+                {
+                    const auto pBone = pMesh->mBones[b];
+
+                    Model::Bone bone;
+                    bone.idx = b;
+                    bone.offset = aiMatrix4x4_to_glmmat4(pBone->mOffsetMatrix);
+                    mesh.armature.bones.insert(std::make_pair(pBone->mName.C_Str(), bone));
+
+                    for (std::size_t w = 0; w < pBone->mNumWeights; w++)
+                    {
+                        const auto& weight = pBone->mWeights[w];
+                        auto& vert = mesh.vertices[weight.mVertexId];
+
+                        for (std::size_t i = 0; i < 4; ++i)
+                        {
+                            if (vert.bones[i] != -1 && vert.weights[i] > weight.mWeight)
+                                continue;
+
+                            vert.bones[i] = (f32)b;
+                            vert.weights[i] = weight.mWeight;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            mesh.indices.resize(pMesh->mNumFaces * (std::size_t)3);
+            for (std::size_t f = 0; f < pMesh->mNumFaces; ++f)
+            {
+                const auto& face = pMesh->mFaces[f];
+                assert(face.mNumIndices == 3 && "Only triangles are supported!");
+
+                for (std::size_t i = 0; i < face.mNumIndices; ++i)
+                {
+                    auto idx = face.mIndices[i];
+                    mesh.indices[f * 3 + i] = idx;
+                }
+            }
+
+            data.meshes.emplace_back(mesh);
+        }
+    }
+
+    static void Assimp_CalcHierarchy(const aiScene* pScene, std::unordered_map<std::string, glm::mat4>& matrices, f32 animTime, aiNode* pNode, const aiMatrix4x4& parent)
+    {
+        /*std::string name = pNode->mName.C_Str();
+
+        const aiAnimation* pAnimation = pScene->mAnimations[0];
+
+        aiMatrix4x4 transform = pNode->mTransformation;
+
+        const aiNodeAnim* pNodeAnim = FindNodeAnim(pAnimation, name);
+
+        if (pNodeAnim)
+        {
+            // Interpolate scaling and generate scaling transformation matrix
+            aiVector3D scale;
+            //CalcInterpolatedScaling(Scaling, AnimationTime, pNodeAnim);
+            //Matrix4f ScalingM;
+            //ScalingM.InitScaleTransform(Scaling.x, Scaling.y, Scaling.z);
+
+            // Interpolate rotation and generate rotation transformation matrix
+            aiQuaternion rotation;
+            //CalcInterpolatedRotation(RotationQ, AnimationTime, pNodeAnim);
+            //Matrix4f RotationM = Matrix4f(RotationQ.GetMatrix());
+
+            // Interpolate translation and generate translation transformation matrix
+            aiVector3D translation;
+            //CalcInterpolatedPosition(Translation, AnimationTime, pNodeAnim);
+            //Matrix4f TranslationM;
+            //TranslationM.InitTranslationTransform(Translation.x, Translation.y, Translation.z);
+
+            // Combine the above transformations
+            //transform = TranslationM * RotationM * ScalingM;
+        }
+
+        aiMatrix4x4 global = parent * transform;
+
+        matrices[name] = m_GlobalInverseTransform * GlobalTransformation * m_BoneInfo[BoneIndex].BoneOffset;
+
+        for (std::size_t i = 0; i < pNode->mNumChildren; i++) {
+            Assimp_CalcHierarchy(pScene, matrices, animTime, pNode->mChildren[i], global);
+        }*/
+    }
+
+    static bool MeshDataLoadImpl_Assimp(const std::string& filename, Model& data)
+    {
+        // Create an instance of the Importer class
+        Assimp::Importer importer;
+        importer.SetPropertyInteger(AI_CONFIG_PP_SLM_VERTEX_LIMIT, 65536);
+
+        // And have it read the given file with some example postprocessing
+        // Usually - if speed is not the most important aspect for you - you'll
+        // probably to request more postprocessing than we do in this example.
+        const aiScene* pScene = importer.ReadFile(ResourceManager::GetFilePath(filename),
+            aiProcess_CalcTangentSpace |
+            aiProcess_Triangulate |
+            aiProcess_JoinIdenticalVertices |
+            aiProcess_GenSmoothNormals |
+            aiProcess_SplitLargeMeshes |
+            //aiProcess_ValidateDataStructure |
+            aiProcess_ImproveCacheLocality |
+            aiProcess_RemoveRedundantMaterials |
+            aiProcess_OptimizeMeshes |
+            //aiProcess_OptimizeGraph |
+            aiProcess_SortByPType);
+
+        // If the import failed, report it
+        if (pScene == nullptr)
+        {
+            Log::Error(importer.GetErrorString());
+            return false;
+        }
+
+        // Extract material data
+        if (pScene->HasMaterials())
+        {
+            data.materials.resize(pScene->mNumMaterials);
+            for (std::size_t i = 0; i < pScene->mNumMaterials; ++i)
+            {
+                const auto pMaterial = pScene->mMaterials[i];
+                auto& material = data.materials[i];
+
+                aiColor3D c(1.f, 1.f, 1.f);
+                if (pMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, c) == aiReturn_SUCCESS)
+                    material.diffuse = glm::vec4(c.r, c.g, c.b, 1.0f);
+
+                // Diffuse maps
+                int numTextures = pMaterial->GetTextureCount(aiTextureType_DIFFUSE);
+                aiString textureName;
+
+                if (numTextures > 0)
+                {
+                    if (pMaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), textureName) == aiReturn_SUCCESS)
+                        material.diffuseMap = Resource<Texture>(textureName.data);
+
+                    if (pMaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_NORMALS, 0), textureName) == aiReturn_SUCCESS)
+                        material.normalMap = Resource<Texture>(textureName.data);
+
+                    if (pMaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_EMISSIVE, 0), textureName) == aiReturn_SUCCESS)
+                        material.emmisionMap = Resource<Texture>(textureName.data);
+
+                    if (pMaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_METALNESS, 0), textureName) == aiReturn_SUCCESS)
+                        material.metallicMap = Resource<Texture>(textureName.data);
+
+                    if (pMaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE_ROUGHNESS, 0), textureName) == aiReturn_SUCCESS)
+                        material.roughnessMap = Resource<Texture>(textureName.data);
+
+                    if (pMaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_AMBIENT_OCCLUSION, 0), textureName) == aiReturn_SUCCESS)
+                        material.aoMap = Resource<Texture>(textureName.data);
+                }
+            }
+        }
+
+        if (pScene->HasAnimations())
+        {
+            aiMatrix4x4 rootInvMatrix = pScene->mRootNode->mTransformation;
+            rootInvMatrix = rootInvMatrix.Inverse();
+
+            data.animations.resize(pScene->mNumAnimations);
+            for (std::size_t i = 0; i < pScene->mNumAnimations; ++i)
+            {
+                const auto pAnim = pScene->mAnimations[i];
+                auto& anim = data.animations[i];
+
+                for (std::size_t j = 0; j < pAnim->mNumChannels; ++j)
+                {
+                    const auto pChannel = pAnim->mChannels[j];
+                    std::vector<glm::mat4> keyframes;
+                    anim.keyframes.insert(std::make_pair(pChannel->mNodeName.C_Str(), keyframes));
+                }
+
+                /*f32 time = 0.f;
+                bool baking = true;
+                while (baking)
+                {
+                    f32 tps = pAnim->mTicksPerSecond != 0 ? pAnim->mTicksPerSecond : 25.0f;
+                    f32 ticks = time * tps;
+                    f32 animTime = glm::mod(ticks, (f32)pAnim->mDuration);
+
+                    std::unordered_map<std::string, glm::mat4> matrices;
+                    Assimp_CalcHierarchy(pScene, matrices, animTime, pScene->mRootNode, pScene->mRootNode->mTransformation);
+
+                    for (const auto& it : matrices)
+                    {
+                        auto it2 = anim.keyframes.find(it.first);
+                        assert(it2 != anim.keyframes.end() && "");
+                        it2->second.emplace_back(it.second);
+                    }
+                }*/
+            }
+        }
+
+        // Now we can access the file's contents.
+        auto pNode = pScene->mRootNode;
+        MeshDataLoadImpl_AssimpLoadNode(pScene, pNode, data);
+
+        // We're done. Everything will be cleaned up by the importer destructor
+        return true;
+    }
+
+    template<>
+    bool ResourceData<Model>::LoadImpl(const std::string& filename, Model& data)
+    {
+        return MeshDataLoadImpl_Assimp(filename, data);
     }
 }

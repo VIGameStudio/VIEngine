@@ -11,7 +11,7 @@ namespace vi
 	private:
 		friend class Application;
 
-		static bool Create();
+		static bool Create(const char* title, int width, int height, bool fullscreen, bool vsync);
 		static void Destroy();
 
 		static void PollEvents();

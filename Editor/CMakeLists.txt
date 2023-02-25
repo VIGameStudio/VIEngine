@@ -11,6 +11,7 @@ include_directories (${EDITOR_ASSETS_PATH})
 add_subdirectory (extern)
 
 set (EDITOR_SRCS
+	"src/Editor/EditorScript.cpp"
 	"src/Editor/ImGuiImpl.cpp"
 )
 

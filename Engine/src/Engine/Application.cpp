@@ -6,9 +6,9 @@
 
 namespace vi
 {
-	int Application::Run(int argc, char** argv)
+	int Application::Run(const AppConfig& config, int argc, char** argv)
 	{
-		if (!Initialize())
+		if (!Initialize(config))
 			return EXIT_FAILURE;
 
 		Timer timer;

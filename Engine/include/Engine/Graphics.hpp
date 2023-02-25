@@ -19,7 +19,9 @@ namespace vi
 	using TextureHandle = u32;
 	constexpr TextureHandle INVALID_TEXTURE = 0;
 
-	enum struct GraphicsBackend { OPENGL, OPENGLES };
+	enum struct GraphicsApi { OPENGL, OPENGLES, VULKAN, DX12 };
+
+	enum struct ShaderLang { UNKNOWN, GLSL, HLSL };
 
 	struct Camera
 	{
@@ -47,7 +49,8 @@ namespace vi
 
 	struct Shader
 	{
-		std::string text;
+		ShaderLang lang = ShaderLang::UNKNOWN;
+		std::string source;
 	};
 
 	struct Texture

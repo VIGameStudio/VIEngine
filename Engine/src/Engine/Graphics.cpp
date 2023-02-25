@@ -25,7 +25,7 @@ namespace vi
         std::stringstream ss;
         ss << is.rdbuf();
 
-        data.text = ss.str();
+        data.source = ss.str();
         return true;
     }
 

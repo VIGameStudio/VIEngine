@@ -72,16 +72,6 @@ namespace vi
 		boundForeignMethods.insert(std::make_pair(name, (WrenForeignMethodFn)fn));
 	}
 
-	double ScriptManager::GetMethodArg(void* vm, int slot)
-	{
-		return wrenGetSlotDouble((WrenVM*)vm, slot);
-	}
-	
-	void ScriptManager::SetMethodArg(void* vm, int slot, double val)
-	{
-		wrenSetSlotDouble((WrenVM*)vm, slot, val);
-	}
-
 	bool ScriptManager::Initialize()
 	{
 		WrenConfiguration config;
@@ -125,5 +115,86 @@ namespace vi
 			return true;
 		}
 		return false;
+	}
+
+	float ScriptSlot<float>::Get(void* vm, int slot)
+	{
+		return (float)wrenGetSlotDouble((WrenVM*)vm, slot);
+	}
+	
+	void ScriptSlot<float>::Set(void* vm, int slot, float val)
+	{
+		wrenSetSlotDouble((WrenVM*)vm, slot, (double)val);
+	}
+
+	double ScriptSlot<double>::Get(void* vm, int slot)
+	{
+		return wrenGetSlotDouble((WrenVM*)vm, slot);
+	}
+	
+	void ScriptSlot<double>::Set(void* vm, int slot, double val)
+	{
+		wrenSetSlotDouble((WrenVM*)vm, slot, val);
+	}
+	
+	int ScriptSlot<int>::Get(void* vm, int slot)
+	{
+		auto a = wrenGetSlotForeign((WrenVM*)vm, slot);
+		return (int)wrenGetSlotDouble((WrenVM*)vm, slot);
+	}
+	
+	void ScriptSlot<int>::Set(void* vm, int slot, int val)
+	{
+		wrenSetSlotDouble((WrenVM*)vm, slot, (double)val);
+	}
+	
+	unsigned ScriptSlot<unsigned>::Get(void* vm, int slot)
+	{
+		return (unsigned)wrenGetSlotDouble((WrenVM*)vm, slot);
+	}
+	
+	void ScriptSlot<unsigned>::Set(void* vm, int slot, unsigned val)
+	{
+		wrenSetSlotDouble((WrenVM*)vm, slot, (double)val);
+	}
+
+	bool ScriptSlot<bool>::Get(void* vm, int slot)
+	{
+		return wrenGetSlotBool((WrenVM*)vm, slot);
+	}
+	
+	void ScriptSlot<bool>::Set(void* vm, int slot, bool val)
+	{
+		wrenSetSlotBool((WrenVM*)vm, slot, val);
+	}
+
+	const char* ScriptSlot<const char*>::Get(void* vm, int slot)
+	{
+		return wrenGetSlotString((WrenVM*)vm, slot);
+	}
+	
+	void ScriptSlot<const char*>::Set(void* vm, int slot, const char* val)
+	{
+		wrenSetSlotString((WrenVM*)vm, slot, val);
+	}
+
+	std::string ScriptSlot<std::string>::Get(void* vm, int slot)
+	{
+		return (std::string)wrenGetSlotString((WrenVM*)vm, slot);
+	}
+	
+	void ScriptSlot<std::string>::Set(void* vm, int slot, const std::string& val)
+	{
+		wrenSetSlotString((WrenVM*)vm, slot, val.c_str());
+	}
+
+	const char* ScriptSlot<const std::string&>::Get(void* vm, int slot)
+	{
+		return wrenGetSlotString((WrenVM*)vm, slot);
+	}
+	
+	void ScriptSlot<const std::string&>::Set(void* vm, int slot, const std::string& val)
+	{
+		wrenSetSlotString((WrenVM*)vm, slot, val.c_str());
 	}
 }

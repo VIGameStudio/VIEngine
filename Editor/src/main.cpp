@@ -10,16 +10,6 @@
 
 using namespace vi;
 
-static double WrenCos(double x)
-{
-	return cos(x);
-}
-
-static double WrenSin(double x)
-{
-	return sin(x);
-}
-
 bool Application::Initialize(const AppConfig& config)
 {
 	if (!Window::Create(config.winTitle, config.winWidth, config.winHeight, config.winFullscreen, config.winVSync))
@@ -51,18 +41,6 @@ bool Application::Initialize(const AppConfig& config)
 		Log::Error("Failed to initialize imgui!");
 		return false;
 	}
-
-	ScriptManager::BindFunction<decltype(&WrenCos), &WrenCos>(true, "main::Math::cos(_)_s");
-	ScriptManager::BindFunction<decltype(&WrenCos), &WrenCos>(true, "main::Math::sin(_)_s");
-
-	ScriptManager::Interpret(
-		"main",
-		"class Math {\n"
-		"  foreign static cos(num)\n"
-		"  foreign static sin(num)\n"
-		"}\n"
-		"System.print(\"%(Math.cos(1.570796326))\")\n"
-	);
 
 	return true;
 }

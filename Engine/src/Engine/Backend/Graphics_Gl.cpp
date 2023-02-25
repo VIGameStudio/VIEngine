@@ -76,7 +76,7 @@ namespace vi
     {
         ASSERT(resource.HasData() && "Shader resource not loaded!");
 
-        const std::string src = resource.GetData().text;
+        const std::string src = resource.GetData().source;
         const std::string vertSrc = fmt::format("{}{}{}{}", GLSL_VERSION, GLSL_HEADER, GLSL_VERT_SHADER, src);
         const std::string fragSrc = fmt::format("{}{}{}{}", GLSL_VERSION, GLSL_HEADER, GLSL_FRAG_SHADER, src);
 

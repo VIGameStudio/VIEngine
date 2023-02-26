@@ -24,6 +24,7 @@ set (ENGINE_SRCS
 	"src/Engine/Backend/Audio_Pa.cpp"
 	"src/Engine/Backend/Graphics_Gl.cpp"
 	"src/Engine/Backend/Physics_Bullet.cpp"
+	"src/Engine/Backend/Physics_Box2d.cpp"
 	"src/Engine/Backend/Script_Wren.cpp"
 	"src/Engine/Backend/Window_Glfw.cpp"
 )

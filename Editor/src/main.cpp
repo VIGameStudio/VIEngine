@@ -1,5 +1,5 @@
 #include "Editor/EditorScript.hpp"
-#include "Editor/ImGuiImpl.hpp"
+#include "Editor/ImGui.hpp"
 
 #include "Engine/Application.hpp"
 #include "Engine/Window.hpp"
@@ -36,7 +36,7 @@ bool Application::Initialize(const AppConfig& config)
 		return false;
 	}
 
-	if (!ImGuiImpl::Initialize(Window::GetWindowPtr()))
+	if (!ImGui::Initialize(Window::GetWindowPtr()))
 	{
 		Log::Error("Failed to initialize imgui!");
 		return false;
@@ -47,7 +47,7 @@ bool Application::Initialize(const AppConfig& config)
 
 void Application::Shutdown()
 {
-	ImGuiImpl::Shutdown();
+	ImGui::Shutdown();
 
 	ScriptManager::Shutdown();
 	Graphics::Shutdown();
@@ -62,11 +62,19 @@ bool Application::IsRunning()
 void Application::Update(float dt)
 {
 	Window::PollEvents();
+	ImGui::NewFrame();
+
+	EditorScript::Update(dt);
+	//ImGui::ShowDemoWindow();
 }
 
 void Application::Render()
 {
+	Graphics::SetClearColor(0, 0, 0, 1);
+	Graphics::ClearScreen(1, 1, 1);
+
 	Graphics::Render();
+	ImGui::Render();
 	Window::Display();
 }
 

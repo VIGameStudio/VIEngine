@@ -29,6 +29,42 @@
 
 namespace vi
 {
+    void Graphics::SetViewport(i32 x, i32 y, i32 width, i32 height)
+    {
+        glViewport(x, y, width, height);
+    }
+
+    void Graphics::SetScissor(i32 x, i32 y, i32 width, i32 height)
+    {
+        glScissor(x, y, width, height);
+    }
+
+    void Graphics::SetClearColor(f32 r, f32 g, f32 b, f32 a)
+    {
+        glClearColor(r, g, b, a);
+    }
+
+    void Graphics::SetClearDepth(f32 depth)
+    {
+        //glDepthRangef(0.0f, 1.0f);
+        glClearDepth(depth);
+    }
+
+    void Graphics::SetClearStencil(u32 mask)
+    {
+        glStencilMask(mask);
+    }
+
+    void Graphics::ClearScreen(bool color, bool depth, bool stencil)
+    {
+        GLbitfield mask = 0;
+        if (color) mask |= GL_COLOR_BUFFER_BIT;
+        if (depth) mask |= GL_DEPTH_BUFFER_BIT;
+        if (stencil) mask |= GL_STENCIL_BUFFER_BIT;
+
+        glClear(mask);
+    }
+
     static GLuint Load_GlShader(const std::string& vertSrc, const std::string& fragSrc, const std::string& geomSrc)
     {
         // Compile vertex shader

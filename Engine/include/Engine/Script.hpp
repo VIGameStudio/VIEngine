@@ -18,6 +18,8 @@ namespace vi
 {
 	enum struct ScriptLang { UNKNOWN, LUA, WREN };
 
+	using ScriptHandle = void*;
+
 	struct Script
 	{
 		ScriptLang lang = ScriptLang::UNKNOWN;
@@ -30,13 +32,55 @@ namespace vi
 		static bool Initialize();
 		static void Shutdown();
 
+		static void CollectGarbage();
+
 		static bool Interpret(const char* module, const char* source);
+
+		static ScriptHandle MakeCallHandle(const char* signature);
+		static bool Call(ScriptHandle method);
+		static void ReleaseHandle(ScriptHandle handle);
+
+		static int GetSlotCount();
+		static void EnsureSlots(int numSlots);
+		//static WrenType GetSlotType(int slot);
+		static bool GetSlotBool(int slot);
+		static const char* GetSlotBytes(int slot, int* length);
+		static double GetSlotDouble(int slot);
+		static void* GetSlotForeign(int slot);
+		static const char* GetSlotString(int slot);
+		static ScriptHandle GetSlotHandle(int slot);
+		static void SetSlotBool(int slot, bool value);
+		static void SetSlotBytes(int slot, const char* bytes, size_t length);
+		static void SetSlotDouble(int slot, double value);
+		static void* SetSlotNewForeign(int slot, int classSlot, size_t size);
+		static void SetSlotNewList(int slot);
+		static void SetSlotNewMap(int slot);
+		static void SetSlotNull(int slot);
+		static void SetSlotString(int slot, const char* text);
+		static void SetSlotHandle(int slot, ScriptHandle handle);
+		static int GetListCount(int slot);
+		static void GetListElement(int listSlot, int index, int elementSlot);
+		static void SetListElement(int listSlot, int index, int elementSlot);
+		static void InsertInList(int listSlot, int index, int elementSlot);
+		static int GetMapCount(int slot);
+		static bool GetMapContainsKey(int mapSlot, int keySlot);
+		static void GetMapValue(int mapSlot, int keySlot, int valueSlot);
+		static void SetMapValue(int mapSlot, int keySlot, int valueSlot);
+		static void RemoveMapValue(int mapSlot, int keySlot, int removedValueSlot);
+		static void GetVariable(const char* module, const char* name, int slot);
+		static bool HasVariable(const char* module, const char* name);
+		static bool HasModule(const char* module);
+		static void AbortFiber(int slot);
+		static void* GetUserData();
+		static void SetUserData(void* userData);
 
 		template<typename TFunction, TFunction fn>
 		static void BindFunction(bool isStatic, const char* name);
 
-	private:
 		static void BindFunctionImpl(bool isStatic, const char* name, void(*fn)(void*));
+
+	private:
+		//static void BindFunctionImpl(bool isStatic, const char* name, void(*fn)(void*));
 	};
 
 	// WIP, heavily based on: https://github.com/Nelarius/wrenpp
@@ -66,7 +110,10 @@ namespace vi
 			obj->~T();
 		}
 
-		void* GetObjectPtr() override { return &m_data; }
+		void* GetObjectPtr() override
+		{
+			return &m_data;
+		}
 
 		template<typename... Args>
 		static void SetInSlot(void* vm, int slot, Args... arg)
@@ -75,6 +122,11 @@ namespace vi
 			//wrenGetVariable(vm, getWrenModuleString<T>(), getWrenClassString<T>(), slot);
 			//ForeignObjectValue<T>* val = new (wrenSetSlotNewForeign(vm, slot, slot, sizeof(ForeignObjectValue<T>))) ForeignObjectValue<T>();
 			//new (val->objectPtr()) T{ std::forward<Args>(arg)... };
+
+			ScriptManager::EnsureSlots(vm, slot + 1);
+			ScriptManager::GetVariable(vm, getWrenModuleString<T>(), getWrenClassString<T>(), slot);
+			ForeignObjectValue<T>* val = new (ScriptManager::SetSlotNewForeign(vm, slot, slot, sizeof(ForeignObjectValue<T>))) ForeignObjectValue<T>();
+			new (val->objectPtr()) T{ std::forward<Args>(arg)... };
 		}
 
 	private:
@@ -92,7 +144,10 @@ namespace vi
 		explicit ForeignObjectPtr(T* pObject) : m_pObject(pObject) {}
 		virtual ~ForeignObjectPtr() = default;
 
-		void* GetObjectPtr() override { return m_pObject; }
+		void* GetObjectPtr() override
+		{
+			return m_pObject;
+		}
 
 		static void SetInSlot(void* vm, int slot, T* pObj)
 		{
@@ -100,6 +155,11 @@ namespace vi
 			//wrenGetVariable(vm, getWrenModuleString<T>(), getWrenClassString<T>(), slot);
 			//void* bytes = wrenSetSlotNewForeign(vm, slot, slot, sizeof(ForeignObjectPtr<T>));
 			//new (bytes) ForeignObjectPtr<T>{obj};
+
+			ScriptManager::EnsureSlots(vm, slot + 1);
+			ScriptManager::GetVariable(vm, getWrenModuleString<T>(), getWrenClassString<T>(), slot);
+			void* bytes = ScriptManager::SetSlotNewForeign(vm, slot, slot, sizeof(ForeignObjectPtr<T>));
+			new (bytes) ForeignObjectPtr<T>{obj};
 		}
 
 	private:
@@ -111,8 +171,9 @@ namespace vi
 	{
 		static T Get(void* vm, int slot)
 		{
-			ForeignObject* obj = nullptr;//static_cast<ForeignObject*>(wrenGetSlotForeign(vm, slot));
-			return *static_cast<T*>(obj->GetObjectPtr());
+			//ForeignObject* pObj = static_cast<ForeignObject*>(wrenGetSlotForeign(vm, slot));
+			ForeignObject* pObj = static_cast<ForeignObject*>(ScriptManager::GetSlotForeign(slot));
+			return *static_cast<T*>(pObj->GetObjectPtr());
 		}
 	
 		static void Set(void* vm, int slot, T t)
@@ -126,8 +187,9 @@ namespace vi
 	{
 		static T& Get(void* vm, int slot)
 		{
-			ForeignObject* obj = nullptr;//static_cast<ForeignObject*>(wrenGetSlotForeign(vm, slot));
-			return *static_cast<T*>(obj->GetObjectPtr());
+			//ForeignObject* pObj = static_cast<ForeignObject*>(wrenGetSlotForeign(vm, slot));
+			ForeignObject* pObj = static_cast<ForeignObject*>(ScriptManager::GetSlotForeign(slot));
+			return *static_cast<T*>(pObj->GetObjectPtr());
 		}
 	
 		static void Set(void* vm, int slot, T& t)
@@ -141,8 +203,9 @@ namespace vi
 	{
 		static const T& Get(void* vm, int slot)
 		{
-			ForeignObject* obj = nullptr;//static_cast<ForeignObject*>(wrenGetSlotForeign(vm, slot));
-			return *static_cast<T*>(obj->GetObjectPtr());
+			//ForeignObject* pObj = static_cast<ForeignObject*>(wrenGetSlotForeign(vm, slot));
+			ForeignObject* pObj = static_cast<ForeignObject*>(ScriptManager::GetSlotForeign(slot));
+			return *static_cast<T*>(pObj->GetObjectPtr());
 		}
 	
 		static void Set(void* vm, int slot, const T& t)
@@ -156,8 +219,9 @@ namespace vi
 	{
 		static T* Get(void* vm, int slot)
 		{
-			ForeignObject* obj = nullptr;//static_cast<ForeignObject*>(wrenGetSlotForeign(vm, slot));
-			return static_cast<T*>(obj->GetObjectPtr());
+			//ForeignObject* pObj = static_cast<ForeignObject*>(wrenGetSlotForeign(vm, slot));
+			ForeignObject* pObj = static_cast<ForeignObject*>(ScriptManager::GetSlotForeign(slot));
+			return static_cast<T*>(pObj->GetObjectPtr());
 		}
 	
 		static void Set(void* vm, int slot, T* t)
@@ -171,8 +235,9 @@ namespace vi
 	{
 		static const T* Get(void* vm, int slot)
 		{
-			ForeignObject* obj = nullptr;// static_cast<ForeignObject*>(wrenGetSlotForeign(vm, slot));
-			return static_cast<const T*>(obj->GetObjectPtr());
+			//ForeignObject* pObj = static_cast<ForeignObject*>(wrenGetSlotForeign(vm, slot));
+			ForeignObject* pObj = static_cast<ForeignObject*>(ScriptManager::GetSlotForeign(slot));
+			return static_cast<const T*>(pObj->GetObjectPtr());
 		}
 	
 		static void Set(void* vm, int slot, const T* t)
@@ -180,13 +245,6 @@ namespace vi
 			ForeignObjectPtr<T>::SetInSlot(vm, slot, const_cast<T*>(t));
 		}
 	};
-
-	//template<>
-	//struct ScriptSlot<void*>
-	//{
-	//	static void* Get(void* vm, int slot);
-	//	static void Set(void* vm, int slot, void* val);
-	//};
 
 	template<>
 	struct ScriptSlot<float>
@@ -305,9 +363,10 @@ namespace vi
 	decltype(auto) InvokeHelper(void* vm, TRet(TClass::* fn)(TArgs...), std::index_sequence<index...>)
 	{
 		using Traits = FunctionTraits<decltype(fn)>;
-		ForeignObject* pObjWrapper = nullptr;// static_cast<ForeignObject*>(wrenGetSlotForeign(vm, 0));
+		//ForeignObject* pObjWrapper = static_cast<ForeignObject*>(wrenGetSlotForeign(vm, 0));
+		ForeignObject* pObjWrapper = static_cast<ForeignObject*>(ScriptManager::GetSlotForeign(0));
 		TClass* pObj = static_cast<TClass*>(pObjWrapper->GetObjectPtr());
-		return (pObj->*fn)(ScriptSlot<typename Traits::template ArgumentType<index>>::get(vm, index + 1)...);
+		return (pObj->*fn)(ScriptSlot<typename Traits::template ArgumentType<index>>::Get(vm, index + 1)...);
 	}
 
 	// const variant
@@ -315,9 +374,10 @@ namespace vi
 	decltype(auto) InvokeHelper(void* vm, TRet(TClass::* fn)(TArgs...) const, std::index_sequence<index...>)
 	{
 		using Traits = FunctionTraits<decltype(fn)>;
-		ForeignObject* pObjWrapper = nullptr;// static_cast<ForeignObject*>(wrenGetSlotForeign(vm, 0));
+		//ForeignObject* pObjWrapper = static_cast<ForeignObject*>(wrenGetSlotForeign(vm, 0));
+		ForeignObject* pObjWrapper = static_cast<ForeignObject*>(ScriptManager::GetSlotForeign(0));
 		const TClass* pObj = static_cast<const TClass*>(pObjWrapper->objectPtr());
-		return (pObj->*fn)(ScriptSlot<typename Traits::template ArgumentType<index>>::get(vm, index + 1)...);
+		return (pObj->*fn)(ScriptSlot<typename Traits::template ArgumentType<index>>::Get(vm, index + 1)...);
 	}
 
 	template<typename TRet, typename TClass, typename... TArgs>

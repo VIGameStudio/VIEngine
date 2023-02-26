@@ -8,6 +8,8 @@ namespace vi
 		static bool Initialize();
 		static void Shutdown();
 
+		static void Update(float dt);
+
 	private:
 	};
 }

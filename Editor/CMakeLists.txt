@@ -12,7 +12,7 @@ add_subdirectory (extern)
 
 set (EDITOR_SRCS
 	"src/Editor/EditorScript.cpp"
-	"src/Editor/ImGuiImpl.cpp"
+	"src/Editor/ImGui.cpp"
 )
 
 add_executable (Editor "src/main.cpp" ${EDITOR_SRCS})

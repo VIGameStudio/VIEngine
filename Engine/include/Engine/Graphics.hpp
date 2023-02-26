@@ -238,6 +238,13 @@ namespace vi
 	class Graphics
 	{
 	public:
+		static void SetViewport(i32 x, i32 y, i32 width, i32 height);
+		static void SetScissor(i32 x, i32 y, i32 width, i32 height);
+		static void SetClearColor(f32 r, f32 g, f32 b, f32 a);
+		static void SetClearDepth(f32 depth);
+		static void SetClearStencil(u32 mask);
+		static void ClearScreen(bool color, bool depth, bool stencil);
+
 		static void LoadPipeline(Pipeline& pipeline, const Pipeline::Settings& settings);
 		static void UnloadPipeline(Pipeline& pipeline);
 

@@ -38,4 +38,36 @@ namespace vi
 	using mat2 = glm::mat2;
 	using mat3 = glm::mat3;
 	using mat4 = glm::mat4;
+
+	struct Vec3
+	{
+		union
+		{
+			float v[3];
+			struct { float x, y, z; };
+		};
+
+		Vec3(float x, float y, float z)
+			: v{ x, y, z }
+		{}
+
+		float norm() const
+		{
+			return sqrt(x * x + y * y + z * z);
+		}
+
+		float dot(const Vec3& rhs) const
+		{
+			return x * rhs.x + y * rhs.y + z * rhs.z;
+		}
+
+		Vec3 cross(const Vec3& rhs) const
+		{
+			return Vec3{
+			  y * rhs.z - z * rhs.y,
+			  z * rhs.x - x * rhs.z,
+			  x * rhs.y - y * rhs.x
+			};
+		}
+	};
 }

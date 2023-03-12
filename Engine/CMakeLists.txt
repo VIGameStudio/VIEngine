@@ -15,6 +15,7 @@ add_subdirectory (extern)
 
 set (ENGINE_SRCS
 	"src/Engine/Application.cpp"
+	"src/Engine/Configuration.cpp"
 	"src/Engine/Graphics.cpp"
 	"src/Engine/Log.cpp"
 	"src/Engine/Profiler.cpp"

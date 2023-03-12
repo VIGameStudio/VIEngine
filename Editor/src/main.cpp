@@ -1,5 +1,6 @@
-#include "Editor/EditorScript.hpp"
 #include "Editor/ImGui.hpp"
+#include "Editor/EditorScript.hpp"
+#include "Editor/Test.hpp"
 
 #include "Engine/Application.hpp"
 #include "Engine/Window.hpp"
@@ -30,15 +31,21 @@ bool Application::Initialize(const AppConfig& config)
 		return false;
 	}
 
-	if (!EditorScript::Initialize())
+	if (!ImGuiImpl::Initialize(Window::GetWindowPtr()))
 	{
-		Log::Error("Failed to initialize editor script module!");
+		Log::Error("Failed to initialize imgui!");
 		return false;
 	}
 
-	if (!ImGui::Initialize(Window::GetWindowPtr()))
+	//if (!EditorScript::Initialize())
+	//{
+	//	Log::Error("Failed to initialize editor script module!");
+	//	return false;
+	//}
+
+	if (!Test::Initialize())
 	{
-		Log::Error("Failed to initialize imgui!");
+		Log::Error("Failed to initialize test!");
 		return false;
 	}
 
@@ -47,7 +54,9 @@ bool Application::Initialize(const AppConfig& config)
 
 void Application::Shutdown()
 {
-	ImGui::Shutdown();
+	Test::Shutdown();
+
+	ImGuiImpl::Shutdown();
 
 	ScriptManager::Shutdown();
 	Graphics::Shutdown();
@@ -62,10 +71,10 @@ bool Application::IsRunning()
 void Application::Update(float dt)
 {
 	Window::PollEvents();
-	ImGui::NewFrame();
+	ImGuiImpl::NewFrame();
 
-	EditorScript::Update(dt);
-	//ImGui::ShowDemoWindow();
+	//EditorScript::Update(dt);
+	Test::Update(dt);
 }
 
 void Application::Render()
@@ -73,8 +82,10 @@ void Application::Render()
 	Graphics::SetClearColor(0, 0, 0, 1);
 	Graphics::ClearScreen(1, 1, 1);
 
+	Test::Render();
+
 	Graphics::Render();
-	ImGui::Render();
+	ImGuiImpl::Render();
 	Window::Display();
 }
 
@@ -87,5 +98,7 @@ int main(int argc, char** argv)
 	config.winWidth = 800;
 	config.winHeight = 600;
 
-	return Application::Run(config, argc, argv);
+	int ret = Application::Run(config, argc, argv);
+	ASSERT(ret == EXIT_SUCCESS);
+	return ret;
 }
